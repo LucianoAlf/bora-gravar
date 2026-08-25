@@ -57,19 +57,28 @@ por WhatsApp; o dono libera o download manualmente depois que a banda paga.
 
 - ✅ Backend no ar no Supabase (projeto `hpeyyamwoisehqylrdtx`): tabelas, RLS, buckets de
   Storage, Edge Function `camarim`, admins, 33 testes de segurança passando.
-- ✅ Página da banda (`site/b/.../index.html`) pronta e revisada.
 - 🟡 **Mesa de Som → Supabase (backlog #1): código pronto, falta teste real.** Login de
   admin, upload de fotos/vídeos pro Storage (com retomada se a internet cair) e "Liberar
-  banda" (grava pacote + valor) já implementados em 25/08/2026. O motor antigo (arrastar
-  fotos, marca d'água em Canvas, redimensionar) foi preservado. O gerador de zip continua
-  existindo, escondido num painel "Ferramentas de emergência", só para quando o Supabase
-  cair. **Falta**: alguém com login de admin de verdade (Alf ou Yuri) testar o fluxo
-  completo uma vez (entrar, publicar uma banda, liberar) — não foi possível simular isso
-  numa sessão de agente porque exigiria digitar a senha real do admin, o que é proibido
-  por regra de segurança do assistente.
-- Campos de data da Mesa de Som (data do show, prazo, validade) viraram seletor de
-  calendário — o banco (`bandas.data_evento/prazo/validade`) exige data real, e a
-  `validade` é usada pela Edge Function pra expirar o link de verdade.
+  banda" (grava pacote + valor) já implementados em 25/08/2026. Interface foi simplificada
+  em seguida: sumiram do formulário os campos iguais pra todas as bandas (evento, data,
+  local, prazo, validade, WhatsApp — viraram constantes fixas no código) e as 26 bandas do
+  Julina Rock Fest já entram pré-cadastradas na primeira vez que a Mesa de Som abre. O motor
+  antigo (arrastar fotos, marca d'água em Canvas, redimensionar) foi preservado. O gerador
+  de zip continua existindo, escondido num painel "Ferramentas de emergência", só para
+  quando o Supabase cair. **Falta**: alguém com login de admin de verdade (Alf ou Yuri)
+  testar o fluxo completo uma vez (entrar, publicar uma banda, liberar) — não foi possível
+  simular isso numa sessão de agente porque exigiria digitar a senha real do admin, o que é
+  proibido por regra de segurança do assistente.
+- 🟡 **Página da banda → Supabase (backlog #2): código pronto, falta teste com banda real.**
+  `site/pagina.html` substitui o antigo `dados.js` estático — busca os dados na Edge Function
+  pela chave da URL. Testado ponta a ponta em 25/08/2026 com uma banda fake inserida direto
+  no banco (fotos, vídeo, estado normal e liberado), tudo passou. Decisão de negócio nova:
+  o vídeo completo de cada música é enviado direto no sistema (sem link de Drive); o corte de
+  30s da prévia acontece no player, não em um arquivo separado. Detalhes das decisões de
+  arquitetura na seção 11 do CAMARIM.md. O protótipo antigo em `site/b/crowns-x7k92m/` foi
+  mantido só de referência, não recebe mais atualizações.
+- ✅ `site/_redirects` (Netlify) e `serve.json` (teste local) já mandam `/b/<chave>/` pra
+  `pagina.html` com URL limpa.
 
 ## Estrutura
 

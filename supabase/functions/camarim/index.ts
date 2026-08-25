@@ -15,6 +15,16 @@ const CHAVE_SERVICO = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VALIDADE = 60 * 60; // 1 hora
 
 const db = createClient(URL_SB, CHAVE_SERVICO, { auth: { persistSession: false } });
+const URL_PREVIAS = `${URL_SB}/storage/v1/object/public/previas/`;
+
+// vídeo "prévia": o arquivo completo mora no bucket público (previas), sem
+// path_alta — o download em alta é o mesmo arquivo público, sem precisar assinar.
+function urlVideo(video: { path_alta: string | null; url_externa: string | null; path_previa: string | null }) {
+  if (video.path_alta) return assina(video.path_alta);
+  if (video.url_externa) return Promise.resolve(video.url_externa);
+  if (video.path_previa) return Promise.resolve(URL_PREVIAS + video.path_previa);
+  return Promise.resolve(null);
+}
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -102,14 +112,14 @@ Deno.serve(async (req) => {
 
     const { data: video } = await db
       .from("videos")
-      .select("id, path_alta, url_externa, previa")
+      .select("id, path_alta, url_externa, path_previa, previa")
       .eq("id", id)
       .eq("banda_id", banda.id)
       .maybeSingle();
 
     if (video) {
       if (!liberado) return resposta({ erro: "ainda nao liberado" }, 403);
-      const url = video.path_alta ? await assina(video.path_alta) : video.url_externa;
+      const url = await urlVideo(video);
       if (!url) return resposta({ erro: "arquivo indisponivel" }, 404);
       await db.rpc("registra_acesso", { p_chave: chave, p_tipo: "baixou", p_detalhe: "video " + id });
       return resposta({ url, expira_em: VALIDADE });
@@ -140,12 +150,12 @@ Deno.serve(async (req) => {
     if (liberado) {
       const { data: videos } = await db
         .from("videos")
-        .select("id, titulo, duracao, path_alta, url_externa, bytes, ordem")
+        .select("id, titulo, duracao, path_alta, url_externa, path_previa, bytes, ordem")
         .eq("banda_id", banda.id)
         .order("ordem");
 
       for (const v of videos ?? []) {
-        const url = v.path_alta ? await assina(v.path_alta) : v.url_externa;
+        const url = await urlVideo(v);
         if (url) itens.push({
           tipo: "video", id: v.id, titulo: v.titulo,
           duracao: v.duracao, bytes: v.bytes, url,

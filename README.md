@@ -37,12 +37,11 @@ bora-gravar/
 │
 ├── site/                         frontend estático (o que vai para o Netlify)
 │   ├── index.html                página inicial (quem chega sem link)
+│   ├── pagina.html               página real da banda — busca os dados no Supabase pela chave da URL
+│   ├── _redirects                Netlify: manda /b/* pra pagina.html (URL limpa)
 │   ├── robots.txt                Disallow: / — mantém fora do Google
 │   ├── _headers                  X-Robots-Tag: noindex
-│   └── b/crowns-x7k92m/          página de exemplo da banda Crowns (protótipo)
-│       ├── index.html            o template renderizado
-│       ├── dados.js              window.DADOS — o único arquivo que se edita no fluxo antigo
-│       └── img/                  fotos da banda (capa, alta f01–f08, marca d'água w*, poster)
+│   └── b/crowns-x7k92m/          protótipo antigo (dados.js estático) — mantido só de referência
 │
 └── supabase/                     backend (já aplicado no projeto hpeyyamwoisehqylrdtx)
     ├── functions/camarim/index.ts        Edge Function de download (links assinados 1h)
@@ -64,9 +63,8 @@ bora-gravar/
 | Buckets de Storage (`previas` público, `originais` privado) | ✅ no ar |
 | Edge Function `camarim` (links assinados) | ✅ no ar |
 | Admins (`lucianoalf.la@gmail.com`, `yuristanzi@gmail.com`) | ✅ criados |
-| Página da banda (`pagina.html`) | ✅ pronta e revisada |
+| Página da banda (`site/pagina.html`, conectada ao Supabase) | 🟡 **código pronto e testado ponta a ponta com dados de teste** — falta um teste com uma banda de verdade, publicada pela Mesa de Som |
 | **Mesa de Som → Supabase** | 🟡 **código pronto, falta teste real** — login, upload e "Liberar banda" implementados; falta confirmar com login de admin de verdade |
-| Página da banda → Edge Function | 🔴 pendente |
 | Deploy Netlify + domínio | 🟡 pendente (CNAME no Registro.br) |
 | Cadastro em lote das 26 bandas | 🟡 pendente |
 

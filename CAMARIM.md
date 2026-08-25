@@ -400,31 +400,51 @@ ligam/desligam as classes `.so-previa` / `.so-liberado`.
 
 ## 11. Estado atual do frontend
 
-### `pagina.html` — a página da banda ✅ pronta
-HTML único, standalone. Testada (18 testes no site real + 39 nos protótipos). Já passou por
-uma revisão de UX pensando no pai que abre o link, que resultou em:
-- marca LA Music sempre visível no topo
-- linha explicativa embaixo do nome da banda
-- bloco "como funciona" em 3 passos
-- aviso explícito **"Por que tem escrito por cima das fotos?"**
-- bullets dos pacotes sem jargão
-- prazo subiu na página
-- barra fixa aparecendo mais cedo no mobile
+### `mesa-de-som.html` — o painel do Alf 🟡 migrado, falta teste com login real
+Login por e-mail/senha, upload pro Supabase (fotos + vídeo completo) e botão **Liberar
+banda** já implementados (25/08/2026). Interface simplificada: sumiram os campos que eram
+iguais pra todas as bandas (evento/data/local/prazo/validade/WhatsApp — viraram constantes);
+as 26 bandas já entram pré-cadastradas na primeira vez que abre. O motor antigo (arrastar
+fotos, marca d'água em Canvas, redimensionar) foi preservado; o gerador de zip continua
+existindo, escondido num painel "Ferramentas de emergência", só para quando o Supabase cair.
+**Falta**: alguém com login de admin de verdade testar o fluxo completo uma vez — não dá pra
+simular isso num agente porque exigiria digitar a senha real do admin.
 
-### `mesa-de-som.html` — o painel do Alf ⚠️ precisa migrar
-~85 KB, roda 100% no navegador dele, **não sobe no Netlify**. Hoje faz tudo:
-
-- sidebar de bandas com busca, KPIs no topo, painel por banda
-- arrastar fotos, marcar **capa** e **cortesia** (a capa trava como cortesia, botão `disabled`)
-- gerar marca d'água em Canvas (diagonal −28°, repetida)
-- redimensionar: capa 1800×1010 · alta 1600 px · com marca 1100 px · poster 1280×720
-- montar `fotos.zip` com um escritor de ZIP em JavaScript puro (método *store*, CRC32 na mão)
-- upload do clipe curto de vídeo (avisa em vermelho acima de 60 MB)
-- guardar tudo em **IndexedDB** (blobs sobrevivem a fechar o navegador)
-- `Gerar só esta banda` → `<slug>.zip` · `Gerar site inteiro` → `site.zip` com as 26
-
-**O gargalo:** ele gera zip → descompacta → arrasta no Netlify. Toda liberação de banda é um
-deploy novo. É exatamente isso que o Supabase resolve.
+### `site/pagina.html` — a página da banda 🟡 conectada ao Supabase, testada com dados sintéticos
+Substituiu o antigo `dados.js` estático: lê a chave da URL (`/b/<chave>/` via redirect do
+Netlify, ou `?chave=` direto), busca `acao=dados` na Edge Function, e quando liberado busca
+também `acao=downloads` (pra pegar os links assinados das fotos em alta e trocar a grade de
+fotos pela versão sem marca). Testada ponta a ponta em 25/08/2026 com uma banda fake inserida
+direto no banco (fotos, vídeo, estado normal e liberado) — **passou**. Falta testar com uma
+banda de verdade publicada pela Mesa de Som. Decisões de arquitetura tomadas nessa migração,
+importantes pra quem mexer nisso depois:
+- **Vídeo completo em vez de link do Drive.** O Alf decidiu (25/08/2026) subir o arquivo
+  completo de cada música direto no sistema. O vídeo marcado como **prévia** vai pro bucket
+  público `previas` (por isso o limite desse bucket subiu pra 20 GB — seção 16) — é o
+  **mesmo arquivo** que toca a prévia e que vira o download em alta depois de liberado, sem
+  reprocessar nada. Os outros vídeos (não-prévia) continuam no bucket privado `originais`,
+  só saem por link assinado depois do pagamento — igual às fotos.
+- **Corte da prévia em 30 segundos é feito no player, não no arquivo.** Não existe recorte de
+  vídeo de verdade (re-encode) — o `<video>` toca o arquivo completo e um `timeupdate` pausa
+  em 30s quando `!liberado`. Decisão consciente: gerar um clipe cortado de verdade no
+  navegador exigiria re-encodar (MediaRecorder), o resultado sairia em WebM e **não toca no
+  Safari/iPhone** — inaceitável pra esse público. A troca é que um usuário técnico poderia,
+  em tese, abrir a URL pública do vídeo direto e ver mais que 30s — risco aceito, porque o
+  ativo de valor real (o vídeo em si) já é intencionalmente uma prévia de baixo risco.
+- **`capa.jpg` e `poster.jpg` são convenção de caminho fixo, não colunas no banco.**
+  A Mesa de Som sempre sobe `previas/<banda_id>/capa.jpg` (hero) e `previas/<banda_id>/poster.jpg`
+  (poster do vídeo) nesses nomes exatos; a página monta a URL direto a partir do `id` da banda
+  que `abrir_camarim` devolve. Não tem coluna `bandas.capa` — a "capa" de verdade (a foto
+  marcada como capa) é só mais uma linha em `fotos`, com `capa:true`.
+- **"Baixar tudo" das fotos é um zip montado no navegador do cliente**, não no servidor: a
+  página busca cada foto assinada via `acao=downloads`, baixa todas e monta o zip na hora
+  com o mesmo escritor de ZIP em JS puro que a Mesa de Som usa (código duplicado de propósito
+  — projeto é HTML estático, sem build step pra compartilhar módulo). Funciona bem pra
+  dezenas de fotos; **não** foi testado com uma banda de 60+ fotos em alta resolução — pode
+  ficar lento. Ver item 5 do backlog.
+- O protótipo antigo em `site/b/crowns-x7k92m/` (com `dados.js` estático) foi **mantido só de
+  referência histórica** — não é mais o template usado, e não recebe as atualizações daqui
+  pra frente.
 
 ---
 
@@ -432,37 +452,37 @@ deploy novo. É exatamente isso que o Supabase resolve.
 
 Em ordem. O item 1 é o que destrava tudo.
 
-### 1. Migrar a Mesa de Som para o Supabase 🔴
-- Login por e-mail/senha (`supabase.auth.signInWithPassword`) — só admin passa.
-- Trocar IndexedDB por Postgres + Storage. Manter o IndexedDB como **rascunho local**
-  enquanto o upload não termina; não jogar fora o trabalho offline dele.
-- Pipeline de upload por foto: gerar as 3 versões em Canvas (como já faz) e mandar
-  `previas/<banda_id>/…` + `originais/<banda_id>/…`, depois `insert` em `fotos`.
-- Upload em lote com barra de progresso, retomada e retry — são ~80 GB no total.
-- Botão **Liberar banda** = `update bandas set liberado=true, pacote_comprado=…`. Um clique,
-  sem deploy.
-- Manter o gerador de zip como plano B, não apagar.
+### 1. Migrar a Mesa de Som para o Supabase 🟡 falta teste com login real
+Ver detalhes na seção 11. O que falta: alguém com acesso de admin de verdade logar, publicar
+uma banda de verdade (fotos + vídeo) e clicar em Liberar, uma vez, pra confirmar o fluxo
+inteiro.
 
-### 2. Ligar a página da banda no Supabase 🔴
-Trocar o `dados.js` estático por um `fetch` na Edge Function usando a **chave da URL**.
-Deixar a página tolerante a falha de rede (mensagem clara, não tela branca).
-Escrever um adaptador do payload novo para o formato `DADOS`.
+### 2. Ligar a página da banda no Supabase 🟡 falta teste com uma banda real
+Ver detalhes na seção 11 (`site/pagina.html`). Testado com dados sintéticos inseridos direto
+no banco; falta confirmar com uma banda publicada pela Mesa de Som de verdade.
 
 ### 3. Deploy 🟡
-- Netlify: `_redirects` mandando `/b/*` para o mesmo `index.html` (SPA-style), já que as
-  páginas passam a ser dinâmicas.
+- ✅ `site/_redirects` já manda `/b/*` pra `pagina.html` (Netlify, URL limpa) — feito em
+  25/08/2026. Localmente, `serve.json` na raiz replica o mesmo redirect pra testar sem subir
+  nada (`http://localhost:5757/b/<chave>/`).
 - Manter `robots.txt` `Disallow: /` e o header `X-Robots-Tag: noindex`.
-- CNAME `camarim.lamusicschool.com.br` → Netlify, no **Registro.br**. Pendente: o Alf ia
-  mandar o print do painel.
+- Falta: publicar de verdade no Netlify e apontar o CNAME `camarim.lamusicschool.com.br` no
+  **Registro.br**. Pendente: o Alf ia mandar o print do painel.
 
-### 4. Cadastro em lote das 26 bandas 🟡
-Um script/tela que cria as 26 de uma vez com prazo, validade e pacotes já preenchidos.
-Incluir a banda extra **"Julina Geral"** com `aberta = true`.
+### 4. Cadastro em lote das 26 bandas ✅ feito (parcial)
+As 26 bandas entram pré-cadastradas sozinhas na Mesa de Som (local, na primeira vez que abre
+— seção 11). **Falta** a banda extra **"Julina Geral"** com `aberta = true` — não foi pedida
+ainda, confirmar com o Alf antes de criar.
 
 ### 5. Melhorias 🟢
-- Marca d'água nos vídeos de prévia (hoje só as fotos têm). Fazer no `ffmpeg` antes de subir.
+- ✅ Botão "baixar tudo" que monta o zip a partir dos links assinados — feito em
+  `site/pagina.html` (seção 11), mas só testado com 2 fotos. Testar/otimizar com uma banda
+  de 60+ fotos em alta — pode precisar de uma barra de progresso mais clara ou de baixar em
+  paralelo em vez de sequencial.
+- Marca d'água nos vídeos de prévia (hoje só as fotos têm). Como o vídeo agora é o arquivo
+  completo tocando com corte por tempo (seção 11), isso deixou de ser tão urgente — sem
+  watermark, um link vazado mostra o show sem marca, mas só até onde o corte deixar assistir.
 - Painel de acessos: quem abriu, quem baixou, quem ainda nem clicou.
-- Botão "baixar tudo" que monte o zip a partir dos links assinados.
 - Reavaliar Cloudflare R2 se o storage do Supabase apertar (seção 4).
 
 ---

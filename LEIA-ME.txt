@@ -1,0 +1,227 @@
+=========================================================
+  CAMARIM — LA MUSIC
+  Site de entrega do Julina Rock Fest 2026
+=========================================================
+
+O QUE TEM AQUI DENTRO
+
+  index.html          página inicial (quem chegar sem link vê isso)
+  robots.txt          impede o Google de achar as páginas
+  _headers            reforça a mesma coisa no Netlify
+  b/crowns-x7k92m/    a pasta da banda Crowns
+       index.html     a página (NÃO precisa mexer nunca)
+       dados.js       <- É SÓ ESTE ARQUIVO QUE VOCÊ EDITA
+       img/           as fotos dessa banda
+
+  Cada banda tem uma pasta dentro de "b/".
+  O nome da pasta é o endereço dela no site.
+
+
+---------------------------------------------------------
+FAZER VÁRIAS BANDAS DE UMA VEZ
+---------------------------------------------------------
+
+  Na Mesa de Som, monte quantas bandas quiser: cria a banda,
+  arrasta as fotos, marca capa e cortesias, cria a próxima.
+  Nada se perde entre uma e outra — fica tudo salvo.
+
+  Quando terminar todas, clique em
+
+        GERAR SITE INTEIRO
+
+  Ele baixa um único arquivo chamado  site.zip  já com
+  TODAS as bandas dentro, prontinho.
+
+  Descompacte e arraste a pasta "site" no Netlify.
+  Uma vez só, todas as bandas no ar.
+
+  (bandas sem foto ou sem capa ficam de fora, e ele te avisa)
+
+  O botão "Gerar só esta banda" continua ali pra quando você
+  precisar refazer uma banda sozinha, depois de liberar o
+  pagamento por exemplo.
+
+
+---------------------------------------------------------
+ONDE FICAM OS ARQUIVOS QUE A BANDA BAIXA
+---------------------------------------------------------
+
+  FOTOS — resolvido automático.
+  Ao gerar a pasta, entra junto um arquivo fotos.zip com
+  todas as fotos sem marca d'água. Ele fica no Netlify, junto
+  com a página, e o botão de baixar já aparece pronto pra
+  banda. Você não faz nada.
+
+  VÍDEOS E FOTOS EM RESOLUÇÃO ORIGINAL — precisam de fora.
+  São pesados demais pro Netlify. Suba num Google Drive, num
+  WeTransfer ou no Cloudflare R2, copie o link e cole no
+  bloco "Downloads" da Mesa de Som. O link vira mais um botão
+  na página da banda.
+
+  Regra prática de tamanho:
+     até uns 200 MB por banda  -> pode ficar no Netlify
+     acima disso (vídeo)       -> link de fora
+
+---------------------------------------------------------
+PASSO 1 — SUBIR NO NETLIFY (primeira vez)
+---------------------------------------------------------
+
+  1. Entre em app.netlify.com e faça login.
+  2. Clique em "Add new site" e depois em "Deploy manually".
+  3. Arraste a pasta "site" inteira para dentro do quadrado.
+  4. Espere uns 20 segundos. Pronto, está no ar.
+
+  O Netlify vai te dar um endereço tipo:
+      algum-nome-aleatorio.netlify.app
+
+  A página da Crowns fica em:
+      algum-nome-aleatorio.netlify.app/b/crowns-x7k92m/
+
+  Esse é o link que você manda pra banda no WhatsApp.
+
+
+---------------------------------------------------------
+PASSO 2 — COLOCAR O ENDEREÇO DA ESCOLA
+---------------------------------------------------------
+
+  Dentro do site no Netlify, vá em:
+      Domain management  ->  Add a domain
+
+  Digite:  camarim.lamusicschool.com.br
+
+  O Netlify vai te mostrar um valor pra cadastrar no
+  Registro.br (um CNAME). Me manda print que eu te falo
+  exatamente onde colar.
+
+
+---------------------------------------------------------
+PASSO 3 — ATUALIZAR O SITE (todas as outras vezes)
+---------------------------------------------------------
+
+  Sempre que mexer em alguma coisa:
+
+  1. Entre no site dentro do Netlify.
+  2. Clique na aba "Deploys".
+  3. Arraste a pasta "site" de novo pra dentro do quadrado.
+
+  Ele substitui tudo e fica no ar em segundos.
+  O endereço NÃO muda.
+
+
+---------------------------------------------------------
+COMO LIBERAR UMA BANDA (depois que ela pagar)
+---------------------------------------------------------
+
+  1. Abra o arquivo:  b/nome-da-banda/dados.js
+     (pode abrir no Bloco de Notas mesmo)
+
+  2. Procure a linha:
+
+         "liberado": false,
+
+     Troque para:
+
+         "liberado": true,
+
+  3. Logo abaixo, escreva qual pacote ela comprou:
+
+         "pacoteComprado": "Pacote completo",
+
+  4. Salve o arquivo e refaça o PASSO 3.
+
+  Pronto. A página da banda muda sozinha: some a parte de
+  venda, aparecem os downloads e as fotos ficam sem marca.
+
+
+---------------------------------------------------------
+COMO ADICIONAR UMA BANDA NOVA  (você faz sozinho)
+---------------------------------------------------------
+
+  Use o arquivo  mesa-de-som.html  que veio junto.
+  Ele fica FORA da pasta "site" — não suba ele no Netlify.
+
+  1. Dê dois cliques em mesa-de-som.html.
+     Abre no navegador, igual a uma página.
+
+  2. Digite o nome da banda e quantas fotos ela tem no total.
+
+  3. Arraste as fotos da banda pra dentro do quadrado.
+     Pode arrastar todas de uma vez.
+
+  4. Em cada foto tem dois botões:
+        CAPA      -> a foto grande que abre a página
+        CORTESIA  -> as poucas que a banda ganha de graça
+     Sugestão: 3 ou 4 cortesias, uma de cada integrante.
+     (a capa vira cortesia sozinha, é proposital)
+
+  5. Clique em "Gerar pasta da banda".
+     Ele cria as marcas d'água, monta tudo e baixa um .zip.
+
+  6. Descompacte esse .zip e coloque a pasta que saiu
+     dentro de  site/b/
+
+  7. Refaça o PASSO 3 (arrastar a pasta "site" no Netlify).
+
+  O endereço da banda vai ser:
+      camarim.lamusicschool.com.br/b/nome-da-pasta/
+
+  IMPORTANTE: as fotos NÃO saem do seu computador. O programa
+  trabalha ali mesmo, no navegador, sem internet. Por isso é
+  rápido e por isso nada vaza.
+
+  Se quiser refazer uma banda, é só gerar de novo — mas o
+  endereço muda. Se a banda já recebeu o link, avise ou
+  renomeie a pasta nova com o nome antigo.
+
+---------------------------------------------------------
+ONDE ENTRAM OS VÍDEOS  (pode ser mais de um)
+---------------------------------------------------------
+
+  Existem DUAS coisas diferentes, não confunda:
+
+  A PRÉVIA — o vídeo que TOCA na página
+  ---------------------------------------
+  Na Mesa de Som, na linha do vídeo, clique em
+  "enviar o arquivo do PC" e escolha o arquivo.
+  Ele vai junto dentro da pasta e toca na página.
+
+  Corte curto, de 40 a 60 segundos. Nesse tamanho o
+  arquivo fica leve (uns 10 a 30 MB) e cabe no Netlify.
+  Se passar de 60 MB o programa avisa em vermelho.
+
+  LINK DO GOOGLE DRIVE NÃO TOCA. O Drive não entrega o
+  arquivo direto, entrega uma página. O player não abre.
+
+  OS VÍDEOS COMPLETOS — que a banda BAIXA
+  ---------------------------------------
+  Esses são pesados demais pro site. Suba no Google
+  Drive mesmo, pegue o link de compartilhamento e cole
+  no campo de link da Mesa de Som.
+
+  Eles aparecem na lista da página com um cadeado e a
+  etiqueta "vem no pacote". Depois que você libera a
+  banda, o cadeado abre e ela baixa pelo Drive.
+
+  RESUMO
+  ------
+     Prévia curta   -> enviar arquivo (toca na página)
+     Vídeo completo -> link do Drive (a banda baixa)
+
+  Marque "prévia" em UM vídeo só. Os outros ficam
+  trancados até a liberação.
+
+---------------------------------------------------------
+O QUE VOCÊ PODE MUDAR SOZINHO NO dados.js
+---------------------------------------------------------
+
+  "banda"          nome que aparece grandão na capa
+  "prazo"          data limite pra banda escolher
+  "validade"       até quando o link fica no ar
+  "whatsapp"       número que recebe os pedidos
+  "totalFotos"     quantas fotos existem no total
+  "pacotes"        nomes, preços e o que vem em cada um
+  "liberado"       false = prévia | true = liberado
+
+  Regra de ouro: mexa só no que está DEPOIS dos dois
+  pontos e DENTRO das aspas. Não apague vírgulas.
+  Se der ruim, me manda o arquivo que eu conserto.

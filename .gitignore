@@ -1,0 +1,33 @@
+# ============================================================
+#  Camarim — LA Music · .gitignore
+# ============================================================
+
+# --- Segredos e ambiente (NUNCA versionar) ---
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# --- Supabase CLI (temporários / estado local) ---
+.branches/
+.temp/
+supabase/.temp/
+supabase/.branches/
+
+# --- Dependências ---
+node_modules/
+
+# --- Bundles gerados pela Mesa de Som (plano B de deploy) ---
+site.zip
+*.zip
+
+# --- Sistema operacional ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editores ---
+.vscode/
+.idea/
+*.swp

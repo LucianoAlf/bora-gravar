@@ -1206,7 +1206,8 @@ async function sincronizaBanda(b){
     whatsapp:WHATSAPP_PADRAO, total_fotos:b.fotos.length,
     total_musicas:2, resolucao:"4K",
     sobre_video:"Prévia curta · o registro completo das duas músicas vem no pacote.",
-    pacotes:pacotesPadrao(), creditos:creditosPadrao(b), equipe:equipePadrao(b), aberta:b.aberta
+    pacotes:pacotesPadrao(), creditos:creditosPadrao(b), equipe:equipePadrao(b), aberta:b.aberta,
+    estado: b.estado==="rascunho" ? "publicada" : b.estado
   };
   if(b.supabaseId){
     const {error}=await sb.from("bandas").update(payload).eq("id",b.supabaseId);

@@ -14,6 +14,19 @@
 - Antes de começar uma funcionalidade nova, faça um **brainstorm** curto para alinhar o
   fluxo antes de escrever código.
 
+## Fluxo de trabalho — commit e push automáticos
+
+- **Combinado com o Yuri em 25/08/2026:** ao final de cada tarefa concluída (uma
+  funcionalidade fechada, uma correção, um passo do backlog), faça **commit e push** para o
+  GitHub sozinho, sem pedir confirmação a cada vez. O objetivo é manter tudo salvo e
+  versionado o tempo todo.
+- Isso vale como autorização permanente para `git push` neste repositório — não é preciso
+  perguntar de novo em cada tarefa.
+- Não vale para ações destrutivas ou que reescrevem histórico (`push --force`,
+  `reset --hard`, apagar branch): essas continuam exigindo confirmação explícita.
+- Antes de cada commit, confira que nenhum segredo entrou em arquivo rastreado (ver regra de
+  segurança abaixo) — isso não muda com a automação.
+
 ## O que é o projeto
 
 **Camarim**, da LA Music (escola de música, Rio de Janeiro). É a plataforma que entrega e

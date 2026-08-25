@@ -65,7 +65,7 @@ bora-gravar/
 | Edge Function `camarim` (links assinados) | ✅ no ar |
 | Admins (`lucianoalf.la@gmail.com`, `yuristanzi@gmail.com`) | ✅ criados |
 | Página da banda (`pagina.html`) | ✅ pronta e revisada |
-| **Mesa de Som → Supabase** | 🔴 **próxima tarefa** — hoje usa IndexedDB + zip manual |
+| **Mesa de Som → Supabase** | 🟡 **código pronto, falta teste real** — login, upload e "Liberar banda" implementados; falta confirmar com login de admin de verdade |
 | Página da banda → Edge Function | 🔴 pendente |
 | Deploy Netlify + domínio | 🟡 pendente (CNAME no Registro.br) |
 | Cadastro em lote das 26 bandas | 🟡 pendente |

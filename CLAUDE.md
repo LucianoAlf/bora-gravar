@@ -58,10 +58,18 @@ por WhatsApp; o dono libera o download manualmente depois que a banda paga.
 - ✅ Backend no ar no Supabase (projeto `hpeyyamwoisehqylrdtx`): tabelas, RLS, buckets de
   Storage, Edge Function `camarim`, admins, 33 testes de segurança passando.
 - ✅ Página da banda (`site/b/.../index.html`) pronta e revisada.
-- 🔴 **Próxima tarefa (backlog #1):** migrar o `mesa-de-som.html` de IndexedDB para o
-  Supabase (login de admin, upload de fotos/vídeos para o Storage, botão "Liberar banda").
-  **Preservar** o motor atual que já funciona (arrastar fotos, marca d'água em Canvas,
-  redimensionar, gerar zip como plano B).
+- 🟡 **Mesa de Som → Supabase (backlog #1): código pronto, falta teste real.** Login de
+  admin, upload de fotos/vídeos pro Storage (com retomada se a internet cair) e "Liberar
+  banda" (grava pacote + valor) já implementados em 25/08/2026. O motor antigo (arrastar
+  fotos, marca d'água em Canvas, redimensionar) foi preservado. O gerador de zip continua
+  existindo, escondido num painel "Ferramentas de emergência", só para quando o Supabase
+  cair. **Falta**: alguém com login de admin de verdade (Alf ou Yuri) testar o fluxo
+  completo uma vez (entrar, publicar uma banda, liberar) — não foi possível simular isso
+  numa sessão de agente porque exigiria digitar a senha real do admin, o que é proibido
+  por regra de segurança do assistente.
+- Campos de data da Mesa de Som (data do show, prazo, validade) viraram seletor de
+  calendário — o banco (`bandas.data_evento/prazo/validade`) exige data real, e a
+  `validade` é usada pela Edge Function pra expirar o link de verdade.
 
 ## Estrutura
 

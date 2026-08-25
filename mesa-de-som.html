@@ -217,9 +217,43 @@ button,input,select{font-family:inherit}
 .aviso .ic{width:26px;height:26px;flex:none;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
 .aviso b{display:block;font-size:15px;margin-bottom:2px}
 .aviso span{font-size:14px;color:var(--muted);display:block;max-width:76ch}
+
+/* ================= login ================= */
+.login{position:fixed;inset:0;z-index:100;background:var(--ink);display:grid;place-items:center;padding:24px}
+.login .cx{width:min(360px,100%);text-align:left}
+.login .n{font-family:var(--display);font-size:30px;letter-spacing:.03em;text-transform:uppercase;margin-bottom:6px;text-align:center}
+.login .n i{color:var(--red);font-style:normal}
+.login .sub{font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+  text-align:center;margin-bottom:28px}
+.login label{display:block;margin-bottom:14px}
+.login .lbl{display:block;margin-bottom:6px}
+.login input{width:100%;background:var(--surface);border:1px solid var(--line-2);color:var(--text);
+  font-size:14.5px;padding:11px 13px;border-radius:2px}
+.login .erro{color:var(--red);font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;margin:2px 0 14px;
+  min-height:14px}
+.login button{margin-top:6px}
+
+/* ================= emergência (zip manual) ================= */
+.emerg{border:1px solid var(--line);background:var(--surface);margin-top:22px}
+.emerg summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);user-select:none}
+.emerg summary:hover{color:var(--text)}
+.emerg .in{padding:4px 16px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.emerg p{color:var(--muted);font-size:13px;max-width:60ch;margin:0 0 12px}
 </style>
 </head>
 <body>
+
+<div class="login" id="login">
+  <div class="cx">
+    <div class="n">Mesa de <i>Som</i></div>
+    <div class="sub">Entrar como administrador</div>
+    <label><span class="lbl">E-mail</span><input id="loginEmail" type="email" autocomplete="username"></label>
+    <label><span class="lbl">Senha</span><input id="loginSenha" type="password" autocomplete="current-password"></label>
+    <div class="erro" id="loginErro"></div>
+    <button class="btn primary block" id="btEntrar">Entrar</button>
+  </div>
+</div>
 
 <div class="top">
   <div class="brand">
@@ -232,6 +266,7 @@ button,input,select{font-family:inherit}
     <div class="kpi"><div class="v" id="kLib">0</div><div class="k">liberadas</div></div>
     <div class="kpi"><div class="v money" id="kReceita">R$ 0</div><div class="k">recebido</div></div>
   </div>
+  <button class="btn sm" id="btSair" style="margin-left:14px">Sair</button>
 </div>
 
 <div class="shell">
@@ -255,10 +290,18 @@ button,input,select{font-family:inherit}
   <span class="dir">
     <span class="okmsg" id="okmsg">Pronto</span>
     <button class="btn" id="btApagar">Apagar banda</button>
-    <button class="btn" id="btGerarTudo">Gerar site inteiro</button>
-    <button class="btn primary grande" id="btGerar" disabled>Gerar só esta banda</button>
+    <button class="btn primary grande" id="btPublicar" disabled>Publicar</button>
   </span>
 </div>
+
+<details class="emerg">
+  <summary>⚙ Ferramentas de emergência</summary>
+  <div class="in">
+    <p>Só use isto se o Supabase estiver fora do ar. Gera a pasta antiga em zip, do jeito que sempre funcionou — mas aí a liberação de banda volta a exigir subir manualmente no Netlify.</p>
+    <button class="btn" id="btGerarTudo">Gerar site inteiro (zip)</button>
+    <button class="btn" id="btGerar" disabled>Gerar só esta banda (zip)</button>
+  </div>
+</details>
 
 <div class="prog" id="prog">
   <div class="cx">
@@ -1084,6 +1127,254 @@ function remover(id){
 }
 
 /* ============================================================
+   Supabase — login e publicação
+   ============================================================ */
+const SUPABASE_URL="https://hpeyyamwoisehqylrdtx.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwZXl5YW13b2lzZWhxeWxyZHR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2ODEyOTUsImV4cCI6MjEwMzI1NzI5NX0.PuameozNXedB46WdZjBcGwCWzTb3YGdROA3NRMjNHh8";
+let sb=null;
+async function iniciaSupabase(){
+  const {createClient}=await import("https://esm.sh/@supabase/supabase-js@2");
+  sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+}
+function exigeLogin(){
+  return new Promise(async(ok)=>{
+    const {data:{session}}=await sb.auth.getSession();
+    if(session){ $("login").style.display="none"; ok(); return; }
+    $("login").style.display="grid";
+    const email=$("loginEmail"), senha=$("loginSenha"), erro=$("loginErro"), bt=$("btEntrar");
+    async function tentar(){
+      erro.textContent=""; bt.disabled=true; bt.textContent="Entrando…";
+      const {error}=await sb.auth.signInWithPassword({email:email.value.trim(),password:senha.value});
+      bt.disabled=false; bt.textContent="Entrar";
+      if(error){ erro.textContent="E-mail ou senha incorretos."; return; }
+      $("login").style.display="none"; ok();
+    }
+    bt.addEventListener("click",tentar);
+    [email,senha].forEach(inp=>inp.addEventListener("keydown",e=>{ if(e.key==="Enter") tentar(); }));
+  });
+}
+function ligaSair(){
+  document.getElementById("btSair").addEventListener("click",async()=>{
+    if(!confirm("Sair da Mesa de Som?")) return;
+    await sb.auth.signOut();
+    location.reload();
+  });
+}
+
+/* ---- formata uma data do calendário (2026-08-22) pro jeito que a família lê ---- */
+const MESES_PT=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+function formataDataBR(iso){
+  if(!iso) return "";
+  const [y,m,d]=String(iso).split("-").map(Number);
+  if(!y||!m||!d) return iso;
+  return d+" de "+MESES_PT[m-1]+" de "+y;
+}
+
+/* ---- conteúdo padrão da página (mesmo texto de sempre) ---- */
+function pacotesPadrao(){
+  return [
+    {nome:"Melhores momentos",preco:"300",itens:[
+      "Vídeo editado com os melhores momentos do show","Até 2 músicas","Áudio captado direto da mesa de som"]},
+    {nome:"2 músicas completas",preco:"500",itens:[
+      "As 2 músicas gravadas do início ao fim","Áudio captado direto da mesa de som",
+      "Edição com cortes e mudanças de câmera","Arquivos entregues pela internet, sem pen drive"]},
+    {nome:"Pacote completo",preco:"700",itens:[
+      "As 2 músicas completas","Mais o vídeo de melhores momentos",
+      "Edição com cortes e mudanças de câmera","<b>Mais todas as fotos profissionais do show</b>"]}
+  ];
+}
+function creditosPadrao(b){
+  return ["Audiovisual · John Silva e Yuri Stanzi","Áudio · Vanderson Tomaz","Produção · LA Music",
+    b.evento+" — "+b.local,"@lamusicschool"];
+}
+function equipePadrao(b){
+  return [["Audiovisual","John Silva e Yuri Stanzi"],["Áudio","Vanderson Tomaz"],
+    ["Produção","LA Music"],["Evento",b.evento],["Local",b.local],["Data",formataDataBR(b.data)]];
+}
+
+/* ---- separa o slug puro do token, pra manter o mesmo link já mostrado ---- */
+function slugToken(b){
+  const partes=b.slug.split("-"); const token=partes.pop();
+  return {slug:partes.join("-")||token, token:token};
+}
+
+async function sincronizaBanda(b){
+  const {slug,token}=slugToken(b);
+  const payload={
+    nome:b.nome, evento:b.evento,
+    data_evento:b.data||null, local:b.local||null, prazo:b.prazo||null, validade:b.validade||null,
+    whatsapp:b.whatsapp, total_fotos:Math.max(b.totalFotos||0,b.fotos.length),
+    total_musicas:2, resolucao:"4K",
+    sobre_video:"Prévia curta · o registro completo das duas músicas vem no pacote.",
+    pacotes:pacotesPadrao(), creditos:creditosPadrao(b), equipe:equipePadrao(b), aberta:b.aberta
+  };
+  if(b.supabaseId){
+    const {error}=await sb.from("bandas").update(payload).eq("id",b.supabaseId);
+    if(error) throw error;
+    return;
+  }
+  const {data,error}=await sb.from("bandas").insert({...payload,slug,token}).select("id,chave").single();
+  if(error){
+    if(error.code==="23505"){
+      const {data:existente}=await sb.from("bandas").select("id,chave").eq("slug",slug).maybeSingle();
+      if(existente){ b.supabaseId=existente.id; b.chave=existente.chave; await gravar(b); return; }
+    }
+    throw error;
+  }
+  b.supabaseId=data.id; b.chave=data.chave; await gravar(b);
+}
+
+async function sincronizaFotos(b,aviso){
+  if(b.capa===null) return;
+  const marcaTxt=b.evento.toUpperCase()+"  ·  PRÉVIA  ·  ";
+  const capaFoto=b.fotos[b.capa];
+  if(b.capaSincronizada!==capaFoto.id){
+    aviso("montando a capa…");
+    const imgCapa=await carrega(capaFoto.blob);
+    const capaBytes=await paraBytes(recorta(imgCapa,1800,1010,0.34),0.82);
+    const posterBytes=await paraBytes(marcaDagua(recorta(imgCapa,1280,720,0.30),marcaTxt),0.80);
+    let r=await sb.storage.from("previas").upload(b.supabaseId+"/capa.jpg",capaBytes,{contentType:"image/jpeg",upsert:true});
+    if(r.error) throw r.error;
+    r=await sb.storage.from("previas").upload(b.supabaseId+"/poster.jpg",posterBytes,{contentType:"image/jpeg",upsert:true});
+    if(r.error) throw r.error;
+    b.capaSincronizada=capaFoto.id; await gravar(b);
+  }
+
+  const capaAtualRemoto=capaFoto.fotoId||null;
+  if(b.capaIdRemota && b.capaIdRemota!==capaAtualRemoto){
+    await sb.from("fotos").update({capa:false}).eq("id",b.capaIdRemota);
+  }
+
+  for(let i=0;i<b.fotos.length;i++){
+    const f=b.fotos[i], ehCort=f.cortesia||b.capa===i, n=String(i+1).padStart(2,"0");
+    if(f.enviado && f.cortesiaSincronizada===ehCort && f.ordemSincronizada===i) continue;
+    aviso("foto "+(i+1)+" de "+b.fotos.length+"…");
+    const img=await carrega(f.blob);
+    const altaBytes=await paraBytes(paraCanvas(img,1600),0.84);
+    const pathAlta=b.supabaseId+"/fotos/f"+n+".jpg";
+    if(!f.enviado){
+      const r=await sb.storage.from("originais").upload(pathAlta,altaBytes,{contentType:"image/jpeg",upsert:true});
+      if(r.error) throw r.error;
+    }
+    let pathPrevia;
+    if(ehCort){
+      pathPrevia=b.supabaseId+"/c"+n+".jpg";
+      const r=await sb.storage.from("previas").upload(pathPrevia,altaBytes,{contentType:"image/jpeg",upsert:true});
+      if(r.error) throw r.error;
+    }else{
+      pathPrevia=b.supabaseId+"/w"+n+".jpg";
+      const wmBytes=await paraBytes(marcaDagua(paraCanvas(img,1100),marcaTxt),0.78);
+      const r=await sb.storage.from("previas").upload(pathPrevia,wmBytes,{contentType:"image/jpeg",upsert:true});
+      if(r.error) throw r.error;
+    }
+    const linha={banda_id:b.supabaseId, ordem:i, nome_original:f.nome,
+      path_previa:pathPrevia, path_alta:pathAlta, cortesia:ehCort, capa:(i===b.capa),
+      bytes:altaBytes.length};
+    if(f.fotoId){
+      const {error}=await sb.from("fotos").update(linha).eq("id",f.fotoId); if(error) throw error;
+    }else{
+      const {data,error}=await sb.from("fotos").insert(linha).select("id").single(); if(error) throw error;
+      f.fotoId=data.id;
+    }
+    if(i===b.capa) b.capaIdRemota=f.fotoId;
+    f.enviado=true; f.cortesiaSincronizada=ehCort; f.ordemSincronizada=i;
+    await gravar(b);
+    await new Promise(r=>setTimeout(r,0));
+  }
+}
+
+async function sincronizaVideos(b,aviso){
+  const idxPrevia=b.videos.findIndex(v=>v.previa);
+  const previaRemotoNovo=idxPrevia>=0 ? (b.videos[idxPrevia].videoId||null) : null;
+  if(b.previaIdRemota && b.previaIdRemota!==previaRemotoNovo){
+    await sb.from("videos").update({previa:false}).eq("id",b.previaIdRemota);
+  }
+  for(let i=0;i<b.videos.length;i++){
+    const v=b.videos[i];
+    if(!v.blob && !v.arquivo) continue;
+    const chaveSinc=JSON.stringify({titulo:v.titulo,duracao:v.duracao,previa:!!v.previa,arquivo:v.arquivo||null,temBlob:!!v.blob});
+    if(v.enviado && v.sincState===chaveSinc) continue;
+    aviso("vídeo "+(i+1)+" de "+b.videos.length+"…");
+    let pathPrevia=null, pathAlta=null, urlExterna=null, posterPath=null, bytes=null;
+    if(v.blob){
+      bytes=v.blob.size;
+      const dados=new Uint8Array(await v.blob.arrayBuffer());
+      if(v.previa){
+        pathPrevia=b.supabaseId+"/previa.mp4";
+        const r=await sb.storage.from("previas").upload(pathPrevia,dados,{contentType:"video/mp4",upsert:true});
+        if(r.error) throw r.error;
+        posterPath=b.supabaseId+"/poster.jpg";
+      }else{
+        pathAlta=b.supabaseId+"/videos/v"+String(i+1).padStart(2,"0")+".mp4";
+        const r=await sb.storage.from("originais").upload(pathAlta,dados,{contentType:"video/mp4",upsert:true});
+        if(r.error) throw r.error;
+      }
+    }else if(v.arquivo){
+      urlExterna=v.arquivo;
+    }
+    const linha={banda_id:b.supabaseId, ordem:i, titulo:v.titulo||"Vídeo", duracao:v.duracao||null,
+      previa:!!v.previa, path_previa:pathPrevia, path_alta:pathAlta, url_externa:urlExterna,
+      poster_path:posterPath, bytes:bytes};
+    if(v.videoId){
+      const {error}=await sb.from("videos").update(linha).eq("id",v.videoId); if(error) throw error;
+    }else{
+      const {data,error}=await sb.from("videos").insert(linha).select("id").single(); if(error) throw error;
+      v.videoId=data.id;
+    }
+    if(v.previa) b.previaIdRemota=v.videoId;
+    v.enviado=true; v.sincState=chaveSinc;
+    await gravar(b);
+  }
+}
+
+async function sincronizaDownloads(b){
+  if(!b.downloads) return;
+  for(let i=0;i<b.downloads.length;i++){
+    const d=b.downloads[i];
+    if(!d.url) continue;
+    const chaveSinc=JSON.stringify({titulo:d.titulo,descricao:d.descricao,tamanho:d.tamanho,url:d.url});
+    if(d.enviado && d.sincState===chaveSinc) continue;
+    const linha={banda_id:b.supabaseId, ordem:i, titulo:d.titulo||"Arquivo",
+      descricao:d.descricao||null, tamanho:d.tamanho||null, url:d.url};
+    if(d.downloadId){
+      const {error}=await sb.from("downloads").update(linha).eq("id",d.downloadId); if(error) throw error;
+    }else{
+      const {data,error}=await sb.from("downloads").insert(linha).select("id").single(); if(error) throw error;
+      d.downloadId=data.id;
+    }
+    d.enviado=true; d.sincState=chaveSinc;
+    await gravar(b);
+  }
+}
+
+async function publicar(){
+  const b=atual(); if(!b) return;
+  if(!b.fotos.length || b.capa===null){ alert("Antes de publicar, a banda precisa de pelo menos uma foto e uma capa definida."); return; }
+  $("prog").classList.add("on"); $("progTt").textContent="Publicando";
+  $("progSub").textContent=b.nome+"…"; $("progFita").style.width="8%";
+  try{
+    await sincronizaBanda(b);
+    $("progFita").style.width="20%";
+    await sincronizaFotos(b,(txt)=>{ $("progSub").textContent=txt; });
+    $("progFita").style.width="75%";
+    await sincronizaVideos(b,(txt)=>{ $("progSub").textContent=txt; });
+    $("progFita").style.width="90%";
+    await sincronizaDownloads(b);
+    $("progFita").style.width="100%";
+    if(b.estado==="rascunho") b.estado="publicada";
+    await gravar(b);
+    $("prog").classList.remove("on");
+    const o=$("okmsg"); o.textContent="Publicado — o link já está no ar"; o.classList.add("on");
+    setTimeout(()=>o.classList.remove("on"),6000);
+    desenhaTudo();
+  }catch(err){
+    $("prog").classList.remove("on");
+    alert("Deu um problema ao publicar: "+err.message+"\n\nO que já subiu foi salvo. Pode clicar em Publicar de novo pra continuar de onde parou.");
+    desenhaTudo();
+  }
+}
+
+/* ============================================================
    Estado
    ============================================================ */
 const PACOTES={300:"Melhores momentos",500:"2 músicas completas",700:"Pacote completo"};
@@ -1100,10 +1391,11 @@ function tokenCurto(){const t="abcdefghijklmnopqrstuvwxyz0123456789";let s="";
 function bandaNova(nome){
   return {
     id:novoId(), nome:nome, slug:slug(nome)+"-"+tokenCurto(),
-    evento:"Julina Rock Fest 2026", data:"22 de agosto de 2026", local:"Shopping Time Center",
-    prazo:"10 de setembro", validade:"30 de setembro de 2026", whatsapp:"5521982583946",
+    evento:"Julina Rock Fest 2026", data:"2026-08-22", local:"Shopping Time Center",
+    prazo:"2026-09-10", validade:"2026-09-30", whatsapp:"5521982583946",
     totalFotos:60, fotos:[], capa:null, videos:[], downloads:[], aberta:false,
-    estado:"rascunho", valor:0, pacote:"", liberadaEm:null
+    estado:"rascunho", valor:0, pacote:"", liberadaEm:null,
+    supabaseId:null, chave:null, capaSincronizada:null, capaIdRemota:null, previaIdRemota:null
   };
 }
 function atual(){ return bandas[sel]; }
@@ -1178,10 +1470,10 @@ function desenhaPainel(){
   + campo("nome","Nome da banda",b.nome)
   + campo("totalFotos","Total de fotos do show",b.totalFotos)
   + campo("evento","Evento",b.evento)
-  + campo("data","Data do show",b.data)
+  + campoData("data","Data do show",b.data)
   + campo("local","Local",b.local)
-  + campo("prazo","Prazo pra escolher",b.prazo)
-  + campo("validade","Link no ar até",b.validade)
+  + campoData("prazo","Prazo pra escolher",b.prazo)
+  + campoData("validade","Link no ar até",b.validade)
   + campo("whatsapp","WhatsApp (só números)",b.whatsapp)
   + '</div></div>'
 
@@ -1228,6 +1520,10 @@ function campo(id,rot,val){
   return '<label class="campo"><span class="lbl">'+rot+'</span>'
        + '<input data-c="'+id+'" type="text" value="'+String(val).replace(/"/g,"&quot;")+'"></label>';
 }
+function campoData(id,rot,val){
+  return '<label class="campo"><span class="lbl">'+rot+'</span>'
+       + '<input data-c="'+id+'" type="date" value="'+String(val||"").replace(/"/g,"&quot;")+'"></label>';
+}
 function ligaCampos(){
   $("painel").querySelectorAll("[data-c]").forEach(el=>{
     el.addEventListener("change",async()=>{
@@ -1257,13 +1553,15 @@ function ligaCampos(){
   drop.addEventListener("drop",e=>addFotos(e.dataTransfer.files));
   $("btAddVideo").addEventListener("click",async()=>{
     const b=atual();
-    b.videos.push({titulo:"",duracao:"",arquivo:"",previa:b.videos.length===0});
+    b.videos.push({titulo:"",duracao:"",arquivo:"",previa:b.videos.length===0,
+      enviado:false, videoId:null, sincState:null});
     await gravar(b); desenhaVideos();
   });
   $("btAddDl").addEventListener("click",async()=>{
     const b=atual();
     if(!b.downloads) b.downloads=[];
-    b.downloads.push({titulo:"",descricao:"",tamanho:"",url:""});
+    b.downloads.push({titulo:"",descricao:"",tamanho:"",url:"",
+      enviado:false, downloadId:null, sincState:null});
     await gravar(b); desenhaDownloads();
   });
 }
@@ -1272,7 +1570,8 @@ function ligaCampos(){
 async function addFotos(lista){
   const b=atual();
   [...lista].filter(f=>/^image\/(jpeg|png)$/.test(f.type)).forEach(f=>{
-    b.fotos.push({id:novoId(), nome:f.name, blob:f, cortesia:b.aberta});
+    b.fotos.push({id:novoId(), nome:f.name, blob:f, cortesia:b.aberta,
+      enviado:false, fotoId:null, cortesiaSincronizada:null, ordemSincronizada:null});
   });
   if(b.capa===null && b.fotos.length) b.capa=0;
   await gravar(b); desenhaTudo();
@@ -1299,8 +1598,10 @@ function desenhaFotos(){
     if(cv){ const i=+cv.dataset.cv; b.capa=i; b.fotos[i].cortesia=true; }
     else if(fr){ const i=+fr.dataset.fr; if(b.capa===i||b.aberta) return; b.fotos[i].cortesia=!b.fotos[i].cortesia; }
     else if(rm){
-      const i=+rm.dataset.rm;
-      if(b.fotos[i].url) URL.revokeObjectURL(b.fotos[i].url);
+      const i=+rm.dataset.rm, alvo=b.fotos[i];
+      if(alvo.url) URL.revokeObjectURL(alvo.url);
+      if(alvo.fotoId && sb) sb.from("fotos").delete().eq("id",alvo.fotoId).then(()=>{}).catch(()=>{});
+      if(b.capaIdRemota && alvo.fotoId===b.capaIdRemota) b.capaIdRemota=null;
       b.fotos.splice(i,1);
       if(b.capa===i) b.capa=b.fotos.length?0:null; else if(b.capa>i) b.capa--;
     } else return;
@@ -1372,7 +1673,10 @@ function desenhaVideos(){
       await gravar(b); desenhaVideos(); return;
     }
     const x=e.target.closest("[data-vx]"); if(!x)return;
-    const b=atual(); b.videos.splice(+x.dataset.vx,1); await gravar(b); desenhaTudo();
+    const b=atual(), i=+x.dataset.vx, alvo=b.videos[i];
+    if(alvo.videoId && sb) sb.from("videos").delete().eq("id",alvo.videoId).then(()=>{}).catch(()=>{});
+    if(b.previaIdRemota && alvo.videoId===b.previaIdRemota) b.previaIdRemota=null;
+    b.videos.splice(i,1); await gravar(b); desenhaTudo();
   };
 }
 
@@ -1399,7 +1703,9 @@ function desenhaDownloads(){
   };
   el.onclick=async e=>{
     const x=e.target.closest("[data-dx]"); if(!x)return;
-    const b=atual(); b.downloads.splice(+x.dataset.dx,1); await gravar(b); desenhaDownloads();
+    const b=atual(), i=+x.dataset.dx, alvo=b.downloads[i];
+    if(alvo.downloadId && sb) sb.from("downloads").delete().eq("id",alvo.downloadId).then(()=>{}).catch(()=>{});
+    b.downloads.splice(i,1); await gravar(b); desenhaDownloads();
   };
 }
 
@@ -1415,17 +1721,30 @@ function desenhaVenda(){
     ct.innerHTML='<span><b>liberada</b></span>';
     cx.innerHTML='<div class="venda"><span class="ok">✓</span><div>'
       + '<div class="s1">Liberada · <b>'+(b.pacote||PACOTES[b.valor])+'</b> · <b>R$ '+b.valor+',00</b></div>'
-      + '<div class="s2">Pago no WhatsApp · liberado em '+(b.liberadaEm||"")+' · gere a pasta de novo e suba no Netlify</div>'
+      + '<div class="s2">Pago no WhatsApp · liberado em '+(b.liberadaEm||"")+' · o link já está liberado, sem precisar publicar de novo</div>'
       + '</div></div><div style="margin-top:14px"><button class="btn sm" id="btDesfazer">Desfazer liberação</button></div>';
     $("btDesfazer").addEventListener("click",async()=>{
+      if(!confirm("Desfazer a liberação de "+b.nome+"? A banda volta a ver a página de venda.")) return;
+      if(b.supabaseId){
+        try{
+          const {error}=await sb.from("bandas").update({liberado:false,estado:"publicada",
+            pacote_comprado:null,valor:null,liberada_em:null}).eq("id",b.supabaseId);
+          if(error) throw error;
+        }catch(err){ alert("Não consegui desfazer no Supabase: "+err.message); return; }
+      }
       b.estado="publicada"; b.valor=0; b.pacote=""; b.liberadaEm=null; escolha=null;
       await gravar(b); desenhaTudo();
     });
     return;
   }
+  if(!b.supabaseId){
+    ct.innerHTML='<span>ainda não publicada</span>';
+    cx.innerHTML='<p class="dica">Publique a banda primeiro (botão "Publicar" no rodapé) — só depois disso dá pra liberar o pagamento.</p>';
+    return;
+  }
   ct.innerHTML='<span>aguardando pagamento</span>';
   cx.innerHTML='<p class="dica">Quando a banda pagar no WhatsApp, marque o pacote e libere. '
-    + 'Depois é só gerar a pasta de novo e subir no Netlify — o link continua o mesmo.</p>'
+    + 'O link já muda na hora, sem precisar publicar de novo.</p>'
     + '<div class="pk">'+PK.map(([v,n])=>'<button data-pk="'+v+'" aria-pressed="'+(escolha===v)+'">'
         + '<span class="pn">'+n+'</span><span class="pv">R$ '+v+'</span></button>').join("")+'</div>'
     + '<button class="btn primary" id="btLiberar"'+(escolha?"":" disabled")+'>Liberar downloads</button>';
@@ -1435,7 +1754,13 @@ function desenhaVenda(){
   const bl=$("btLiberar");
   if(bl) bl.addEventListener("click",async()=>{
     if(!escolha) return;
-    b.estado="liberada"; b.valor=escolha; b.pacote=PACOTES[escolha];
+    const pacote=PACOTES[escolha];
+    try{
+      const {error}=await sb.from("bandas").update({liberado:true,pacote_comprado:pacote,valor:escolha})
+        .eq("id",b.supabaseId);
+      if(error) throw error;
+    }catch(err){ alert("Não consegui liberar no Supabase: "+err.message); return; }
+    b.estado="liberada"; b.valor=escolha; b.pacote=pacote;
     b.liberadaEm=new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long"});
     escolha=null; await gravar(b); desenhaTudo();
   });
@@ -1445,7 +1770,7 @@ function desenhaVenda(){
 function desenhaBarra(){
   const b=atual();
   if(!b){ $("estado").textContent="Crie a primeira banda";
-    $("btGerar").disabled=true; $("btGerarTudo").disabled=true; return; }
+    $("btGerar").disabled=true; $("btGerarTudo").disabled=true; $("btPublicar").disabled=true; return; }
   const falta=[];
   if(!b.fotos.length) falta.push("fotos");
   if(b.capa===null) falta.push("capa");
@@ -1453,9 +1778,10 @@ function desenhaBarra(){
     ? 'Falta: <b>'+falta.join(", ")+'</b>'
     : 'Pronta · <b>'+b.nome+'</b> · '+b.fotos.length+' fotos · '+b.videos.length+' vídeos';
   $("btGerar").disabled=falta.length>0;
+  $("btPublicar").disabled=falta.length>0;
   const prontas=bandas.filter(x=>x.fotos.length && x.capa!==null).length;
   $("btGerarTudo").disabled = prontas===0;
-  $("btGerarTudo").textContent = prontas>1 ? ("Gerar site inteiro ("+prontas+" bandas)") : "Gerar site inteiro";
+  $("btGerarTudo").textContent = prontas>1 ? ("Gerar site inteiro ("+prontas+" bandas · zip)") : "Gerar site inteiro (zip)";
 }
 
 function desenhaTudo(){ desenhaLista($("busca").value); desenhaPainel(); desenhaBarra(); kpis(); }
@@ -1548,28 +1874,17 @@ async function montaArquivos(b, prefixo, aviso){
   })));
 
   const D={
-    banda:b.nome, evento:b.evento, data:b.data, local:b.local,
-    prazo:b.prazo, validade:b.validade, whatsapp:b.whatsapp,
+    banda:b.nome, evento:b.evento, data:formataDataBR(b.data), local:b.local,
+    prazo:formataDataBR(b.prazo), validade:formataDataBR(b.validade), whatsapp:b.whatsapp,
     capa:"capa.jpg", posterVideo:"poster.jpg",
     totalFotos:Math.max(b.totalFotos||0,b.fotos.length),
     totalMusicas:"2", resolucao:"4K",
     videos:videosFinal,
     sobreVideo:"Prévia curta · o registro completo das duas músicas vem no pacote.",
     fotos:dadosFotos,
-    pacotes:[
-      {nome:"Melhores momentos",preco:"300",itens:[
-        "Vídeo editado com os melhores momentos do show","Até 2 músicas","Áudio captado direto da mesa de som"]},
-      {nome:"2 músicas completas",preco:"500",itens:[
-        "As 2 músicas gravadas do início ao fim","Áudio captado direto da mesa de som",
-        "Edição com cortes e mudanças de câmera","Arquivos entregues pela internet, sem pen drive"]},
-      {nome:"Pacote completo",preco:"700",itens:[
-        "As 2 músicas completas","Mais o vídeo de melhores momentos",
-        "Edição com cortes e mudanças de câmera","<b>Mais todas as fotos profissionais do show</b>"]}
-    ],
-    creditos:["Audiovisual · John Silva e Yuri Stanzi","Áudio · Vanderson Tomaz","Produção · LA Music",
-      b.evento+" — "+b.local,"@lamusicschool"],
-    equipe:[["Audiovisual","John Silva e Yuri Stanzi"],["Áudio","Vanderson Tomaz"],
-      ["Produção","LA Music"],["Evento",b.evento],["Local",b.local],["Data",b.data]],
+    pacotes:pacotesPadrao(),
+    creditos:creditosPadrao(b),
+    equipe:equipePadrao(b),
     liberado:liberado, pacoteComprado:b.pacote||"", downloads:downloads
   };
   arqs.push({nome:prefixo+"dados.js",
@@ -1621,6 +1936,8 @@ async function gerar(quais, nomeArquivo, prefixoBase){
   }
 }
 
+$("btPublicar").addEventListener("click",publicar);
+
 $("btGerar").addEventListener("click",()=>{
   const b=atual(); if(!b) return;
   gerar([b], b.slug+".zip", null);
@@ -1641,6 +1958,9 @@ $("btGerarTudo").addEventListener("click",()=>{
    Começo
    ============================================================ */
 (async function(){
+  await iniciaSupabase();
+  ligaSair();
+  await exigeLogin();
   try{
     await abreDB();
     bandas=await lerTudo();

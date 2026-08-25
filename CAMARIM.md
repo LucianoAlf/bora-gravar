@@ -553,6 +553,7 @@ Abrir a banda na Mesa de Som → **Liberar** → escolher o pacote. Pronto, sem 
 | Quebra do nome da banda no hero | Envolver **cada palavra** em `<span class="w">` com `white-space:nowrap`. |
 | Uma prévia por banda | Índice único parcial no banco. Marcar `previa` num vídeo só. |
 | Advisors `security_definer_executable` | Intencionais em `abrir_camarim` e `registra_acesso`. Não "corrigir". |
+| `supabase db push` quebrado nesse projeto | Todas as migrations usam o mesmo prefixo de data (`20260825_000N_nome.sql`). O CLI extrai só a parte numérica antes do primeiro `_` como "versão" — como todas compartilham `20260825`, ele tenta reinserir a mesma versão no histórico e quebra com `duplicate key … schema_migrations_pkey`. Enquanto isso não for corrigido (precisaria renomear os arquivos com timestamp completo, ex. `20260825000100_schema.sql`), aplique mudanças de schema direto via SQL (Management API ou painel do Supabase) e registre um arquivo em `supabase/migrations/` só como documentação — não confie em `db push` pra sincronizar. Foi assim que o limite do bucket `previas` foi elevado pra 20 GB em 25/08/2026. |
 
 ---
 

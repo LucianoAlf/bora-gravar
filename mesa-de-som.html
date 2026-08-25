@@ -156,10 +156,10 @@ button,input,select{font-family:inherit}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* vídeos */
-.vlinha{display:grid;grid-template-columns:1.4fr .5fr 2fr auto auto;gap:10px;align-items:center;
+.vlinha{display:grid;grid-template-columns:1.4fr .5fr 2fr 1.1fr auto auto;gap:10px;align-items:center;
   border:1px solid var(--line);background:var(--surface);padding:12px;margin-bottom:10px}
 @media(max-width:1000px){.vlinha{grid-template-columns:1fr 1fr}}
-.vlinha input[type=text]{background:var(--ink);border:1px solid var(--line-2);color:var(--text);
+.vlinha input[type=text],.vlinha select{background:var(--ink);border:1px solid var(--line-2);color:var(--text);
   font-size:14px;padding:9px 10px;border-radius:2px;width:100%}
 .vlinha .prev{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;
   letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap;cursor:pointer}
@@ -1285,23 +1285,21 @@ async function sincronizaFotos(b,aviso){
 }
 
 async function sincronizaVideos(b,aviso){
-  const idxPrevia=b.videos.findIndex(v=>v.previa);
-  const previaRemotoNovo=idxPrevia>=0 ? (b.videos[idxPrevia].videoId||null) : null;
-  if(b.previaIdRemota && b.previaIdRemota!==previaRemotoNovo){
-    await sb.from("videos").update({previa:false}).eq("id",b.previaIdRemota);
-  }
   for(let i=0;i<b.videos.length;i++){
     const v=b.videos[i];
     if(!v.blob && !v.arquivo) continue;
-    const chaveSinc=JSON.stringify({titulo:v.titulo,duracao:v.duracao,previa:!!v.previa,arquivo:v.arquivo||null,temBlob:!!v.blob});
+    const chaveSinc=JSON.stringify({titulo:v.titulo,duracao:v.duracao,previa:!!v.previa,categoria:v.categoria||null,arquivo:v.arquivo||null,temBlob:!!v.blob});
     if(v.enviado && v.sincState===chaveSinc) continue;
     aviso("vídeo "+(i+1)+" de "+b.videos.length+"…");
     let pathPrevia=null, pathAlta=null, urlExterna=null, posterPath=null, bytes=null;
     if(v.blob){
+      if(v.blob.size>47_000_000){
+        throw new Error('O vídeo "'+(v.titulo||"sem título")+'" passa de 45MB e não vai subir — cole um link (Drive) no lugar do arquivo pra esse.');
+      }
       bytes=v.blob.size;
       const dados=new Uint8Array(await v.blob.arrayBuffer());
       if(v.previa){
-        pathPrevia=b.supabaseId+"/previa.mp4";
+        pathPrevia=b.supabaseId+"/previa"+String(i+1).padStart(2,"0")+".mp4";
         const r=await sb.storage.from("previas").upload(pathPrevia,dados,{contentType:"video/mp4",upsert:true});
         if(r.error) throw r.error;
         posterPath=b.supabaseId+"/poster.jpg";
@@ -1314,7 +1312,7 @@ async function sincronizaVideos(b,aviso){
       urlExterna=v.arquivo;
     }
     const linha={banda_id:b.supabaseId, ordem:i, titulo:v.titulo||"Vídeo", duracao:v.duracao||null,
-      previa:!!v.previa, path_previa:pathPrevia, path_alta:pathAlta, url_externa:urlExterna,
+      previa:!!v.previa, categoria:v.categoria||null, path_previa:pathPrevia, path_alta:pathAlta, url_externa:urlExterna,
       poster_path:posterPath, bytes:bytes};
     if(v.videoId){
       const {error}=await sb.from("videos").update(linha).eq("id",v.videoId); if(error) throw error;
@@ -1322,7 +1320,6 @@ async function sincronizaVideos(b,aviso){
       const {data,error}=await sb.from("videos").insert(linha).select("id").single(); if(error) throw error;
       v.videoId=data.id;
     }
-    if(v.previa) b.previaIdRemota=v.videoId;
     v.enviado=true; v.sincState=chaveSinc;
     await gravar(b);
   }
@@ -1407,7 +1404,7 @@ function bandaNova(nome){
     id:novoId(), nome:nome, slug:slug(nome)+"-"+tokenCurto(),
     fotos:[], capa:null, videos:[], downloads:[], aberta:false,
     estado:"rascunho", valor:0, pacote:"", liberadaEm:null,
-    supabaseId:null, chave:null, capaSincronizada:null, capaIdRemota:null, previaIdRemota:null
+    supabaseId:null, chave:null, capaSincronizada:null, capaIdRemota:null
   };
 }
 function atual(){ return bandas[sel]; }
@@ -1504,10 +1501,12 @@ function desenhaPainel(){
 
   /* ---- vídeos ---- */
   + '<div class="bloco"><div class="bhead"><div><span class="lbl">Audiovisual</span><h2>Vídeos</h2></div></div>'
-  + '<p class="dica">Suba aqui o <b>vídeo completo</b> de cada música ("enviar o arquivo do PC"). Marque '
-  + 'um deles como <b>prévia</b> — esse toca os primeiros 30 segundos pra quem ainda não pagou; os outros '
-  + 'ficam trancados até você liberar a banda. Se preferir, ainda dá pra colar um link de fora em vez de '
-  + 'subir o arquivo.</p>'
+  + '<p class="dica">Cada música é um vídeo aqui embaixo. Arquivos pequenos (até 45MB — geralmente só o '
+  + '"melhores momentos") podem subir direto; músicas completas costumam ser grandes demais, então cole '
+  + 'o link do Google Drive nessas. Marque <b>prévia</b> em quantos quiser — cada um toca 30 segundos do '
+  + 'meio do vídeo pra quem ainda não pagou. Escolha a <b>categoria</b> de cada um: é ela que decide qual '
+  + 'pacote libera aquele vídeo (Melhores momentos libera só os de "Melhores momentos"; 2 músicas completas '
+  + 'libera só os de "Música completa"; o Pacote completo libera todos).</p>'
   + '<div id="vlista"></div><button class="btn" id="btAddVideo">+ Adicionar vídeo</button></div>'
 
   /* ---- downloads ---- */
@@ -1616,8 +1615,8 @@ function desenhaVideos(){
       meio='<div class="vcell"><div class="vfile"><span class="nm">'+(v.nomeArq||"vídeo.mp4")+'</span>'
         + '<span class="peso">'+(mb>=1?mb.toFixed(1).replace(".",","):"<1")+' MB</span>'
         + '<button data-vlimpa="'+i+'" title="Tirar o arquivo">✕</button></div>'
-        + '<span class="vsub'+(mb>2000?" alerta":"")+'">'
-        + (mb>2000 ? "arquivo grande — o envio pode demorar bastante" : "vai junto no site")
+        + '<span class="vsub'+(mb>45?" alerta":"")+'">'
+        + (mb>45 ? "passa de 45MB — não vai subir, use um link (Drive) em vez do arquivo" : "vai junto no site")
         + '</span></div>';
     } else {
       meio='<div class="vcell">'
@@ -1628,6 +1627,11 @@ function desenhaVideos(){
     + '<input type="text" data-vt="'+i+'" placeholder="Título (ex: Música 1 — Sweet Child)" value="'+(v.titulo||"").replace(/"/g,"&quot;")+'">'
     + '<input type="text" data-vd="'+i+'" placeholder="4:32" value="'+(v.duracao||"")+'">'
     + meio
+    + '<select data-vc="'+i+'">'
+      + '<option value=""'+(!v.categoria?" selected":"")+'>Categoria…</option>'
+      + '<option value="melhores_momentos"'+(v.categoria==="melhores_momentos"?" selected":"")+'>Melhores momentos</option>'
+      + '<option value="completa"'+(v.categoria==="completa"?" selected":"")+'>Música completa</option>'
+    + '</select>'
     + '<label class="prev"><input type="checkbox" data-vp="'+i+'"'+(v.previa?" checked":"")+'> prévia</label>'
     + '<button class="del" data-vx="'+i+'">✕</button></div>';
   }).join("");
@@ -1642,10 +1646,14 @@ function desenhaVideos(){
   };
   el.onchange=async e=>{
     const b=atual(), t=e.target;
-    if(t.dataset.vp===undefined) return;
-    const i=+t.dataset.vp;
-    b.videos.forEach((v,k)=>v.previa=(k===i)?t.checked:false);
-    await gravar(b); desenhaVideos();
+    if(t.dataset.vp!==undefined){
+      b.videos[+t.dataset.vp].previa=t.checked;
+      await gravar(b); desenhaVideos(); return;
+    }
+    if(t.dataset.vc!==undefined){
+      b.videos[+t.dataset.vc].categoria=t.value||null;
+      await gravar(b); return;
+    }
   };
   el.onclick=async e=>{
     const sobe=e.target.closest("[data-vsobe]");
@@ -1672,7 +1680,6 @@ function desenhaVideos(){
     const x=e.target.closest("[data-vx]"); if(!x)return;
     const b=atual(), i=+x.dataset.vx, alvo=b.videos[i];
     if(alvo.videoId && sb) sb.from("videos").delete().eq("id",alvo.videoId).then(()=>{}).catch(()=>{});
-    if(b.previaIdRemota && alvo.videoId===b.previaIdRemota) b.previaIdRemota=null;
     b.videos.splice(i,1); await gravar(b); desenhaTudo();
   };
 }

@@ -26,6 +26,25 @@ function urlVideo(video: { path_alta: string | null; url_externa: string | null;
   return Promise.resolve(null);
 }
 
+// fotos em alta só saem no Pacote completo — nos outros dois pacotes, só as cortesias
+function fotosLiberadas(banda: { aberta: boolean; liberado: boolean; pacote_comprado: string | null }) {
+  return banda.aberta || (banda.liberado && banda.pacote_comprado === "Pacote completo");
+}
+
+// cada vídeo só libera com o pacote que corresponde à sua categoria
+// (ou com o Pacote completo, que libera tudo)
+function videoLiberado(
+  banda: { aberta: boolean; liberado: boolean; pacote_comprado: string | null },
+  categoria: string | null,
+) {
+  if (banda.aberta) return true;
+  if (!banda.liberado) return false;
+  if (banda.pacote_comprado === "Pacote completo") return true;
+  if (banda.pacote_comprado === "Melhores momentos") return categoria === "melhores_momentos";
+  if (banda.pacote_comprado === "2 músicas completas") return categoria === "completa";
+  return false;
+}
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -103,7 +122,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (foto) {
-      if (!liberado && !foto.cortesia) return resposta({ erro: "ainda nao liberado" }, 403);
+      if (!fotosLiberadas(banda) && !foto.cortesia) return resposta({ erro: "ainda nao liberado" }, 403);
       const url = await assina(foto.path_alta);
       if (!url) return resposta({ erro: "arquivo indisponivel" }, 404);
       await db.rpc("registra_acesso", { p_chave: chave, p_tipo: "baixou", p_detalhe: "foto " + id });
@@ -112,13 +131,13 @@ Deno.serve(async (req) => {
 
     const { data: video } = await db
       .from("videos")
-      .select("id, path_alta, url_externa, path_previa, previa")
+      .select("id, path_alta, url_externa, path_previa, previa, categoria")
       .eq("id", id)
       .eq("banda_id", banda.id)
       .maybeSingle();
 
     if (video) {
-      if (!liberado) return resposta({ erro: "ainda nao liberado" }, 403);
+      if (!videoLiberado(banda, video.categoria)) return resposta({ erro: "ainda nao liberado" }, 403);
       const url = await urlVideo(video);
       if (!url) return resposta({ erro: "arquivo indisponivel" }, 404);
       await db.rpc("registra_acesso", { p_chave: chave, p_tipo: "baixou", p_detalhe: "video " + id });
@@ -138,8 +157,9 @@ Deno.serve(async (req) => {
       .eq("banda_id", banda.id)
       .order("ordem");
 
+    const fotosOk = fotosLiberadas(banda);
     for (const f of fotos ?? []) {
-      if (!liberado && !f.cortesia) continue;
+      if (!fotosOk && !f.cortesia) continue;
       const url = await assina(f.path_alta);
       if (url) itens.push({
         tipo: "foto", id: f.id, titulo: f.nome_original ?? "Foto",
@@ -150,11 +170,12 @@ Deno.serve(async (req) => {
     if (liberado) {
       const { data: videos } = await db
         .from("videos")
-        .select("id, titulo, duracao, path_alta, url_externa, path_previa, bytes, ordem")
+        .select("id, titulo, duracao, path_alta, url_externa, path_previa, categoria, bytes, ordem")
         .eq("banda_id", banda.id)
         .order("ordem");
 
       for (const v of videos ?? []) {
+        if (!videoLiberado(banda, v.categoria)) continue;
         const url = await urlVideo(v);
         if (url) itens.push({
           tipo: "video", id: v.id, titulo: v.titulo,

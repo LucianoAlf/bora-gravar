@@ -1203,6 +1203,9 @@ function slugToken(b){
   const partes=b.slug.split("-"); const token=partes.pop();
   return {slug:partes.join("-")||token, token:token};
 }
+function chavePublica(b){
+  return b.chave||b.slug;
+}
 
 async function sincronizaBanda(b){
   const {slug,token}=slugToken(b);
@@ -1577,7 +1580,7 @@ function desenhaPainel(){
   + 'pro Supabase — se a conexão cair no meio do caminho, é só clicar em Publicar de novo que continua de onde parou.</span></div></div>'
 
   + '<div class="mhead"><div><span class="lbl">Banda</span><h1>'+b.nome+'</h1>'
-  + '<div class="linkrow"><span class="linkbox">'+SITE_PUBLICO.replace(/^https?:\/\//,"")+'/b/'+b.slug+'/</span>'
+  + '<div class="linkrow"><span class="linkbox">'+SITE_PUBLICO.replace(/^https?:\/\//,"")+'/b/'+chavePublica(b)+'/</span>'
   + '<button class="btn sm" id="btCopiar">Copiar link</button>'
   + '<span class="okmsg" id="okLink">Copiado</span></div></div></div>'
 
@@ -1643,7 +1646,7 @@ function ligaCampos(){
     });
   });
   $("btCopiar").addEventListener("click",async()=>{
-    const t=SITE_PUBLICO+"/b/"+atual().slug+"/";
+    const t=SITE_PUBLICO+"/b/"+chavePublica(atual())+"/";
     try{await navigator.clipboard.writeText(t);}catch(e){}
     const o=$("okLink"); o.classList.add("on"); setTimeout(()=>o.classList.remove("on"),1600);
   });

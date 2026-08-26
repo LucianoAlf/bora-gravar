@@ -156,14 +156,19 @@ button,input,select{font-family:inherit}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* vídeos */
-.vlinha{display:grid;grid-template-columns:1.4fr .5fr 2fr 1.1fr auto auto;gap:10px;align-items:center;
-  border:1px solid var(--line);background:var(--surface);padding:12px;margin-bottom:10px}
-@media(max-width:1000px){.vlinha{grid-template-columns:1fr 1fr}}
-.vlinha input[type=text],.vlinha select{background:var(--ink);border:1px solid var(--line-2);color:var(--text);
+.vcard{border:1px solid var(--line);background:var(--surface);padding:12px;margin-bottom:10px}
+.vhead{display:grid;grid-template-columns:1.4fr .5fr 1.1fr auto;gap:10px;align-items:center;margin-bottom:10px}
+@media(max-width:1000px){.vhead{grid-template-columns:1fr 1fr}}
+.vcard input[type=text],.vcard select{background:var(--ink);border:1px solid var(--line-2);color:var(--text);
   font-size:14px;padding:9px 10px;border-radius:2px;width:100%}
-.vlinha .prev{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap;cursor:pointer}
-.vlinha .prev input{accent-color:var(--red);width:17px;height:17px}
+.vbody{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:760px){.vbody{grid-template-columns:1fr}}
+.vslot{border:1px dashed var(--line-2);padding:10px;border-radius:2px}
+.vslot .vslbl{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:8px}
+.vcard .prev{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap;cursor:pointer;margin-bottom:8px}
+.vcard .prev input{accent-color:var(--red);width:17px;height:17px}
 .vfile{display:flex;align-items:center;gap:8px;background:var(--ink);border:1px solid var(--line-2);
   padding:8px 10px;border-radius:2px;min-width:0}
 .vfile .nm{font-family:var(--mono);font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;
@@ -175,8 +180,8 @@ button,input,select{font-family:inherit}
 .vcell .ou{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .vsub{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 .vsub.alerta{color:var(--red)}
-.vlinha .del{background:transparent;border:1px solid var(--line-2);color:#7E5F5C;cursor:pointer;padding:9px 12px;border-radius:2px}
-.vlinha .del:hover{background:#3A1614;color:#fff}
+.vhead .del{background:transparent;border:1px solid var(--line-2);color:#7E5F5C;cursor:pointer;padding:9px 12px;border-radius:2px}
+.vhead .del:hover{background:#3A1614;color:#fff}
 
 .dlinha{display:grid;grid-template-columns:1.2fr 1.6fr .6fr 2fr auto;gap:10px;align-items:center;
   border:1px solid var(--line);background:var(--surface);padding:12px;margin-bottom:10px}
@@ -1284,33 +1289,98 @@ async function sincronizaFotos(b,aviso){
   }
 }
 
+/* ---- corta um trecho do meio de um vídeo, direto no navegador ----
+   Se o arquivo já for curto o bastante, usa ele do jeito que está.
+   Senão, toca o trecho central num <video> escondido e regrava com
+   MediaRecorder — sem precisar subir o arquivo inteiro pra lugar nenhum. */
+async function geraPrevia(arquivo,segundos){
+  const url=URL.createObjectURL(arquivo);
+  const video=document.createElement("video");
+  video.src=url; video.muted=false; video.playsInline=true; video.preload="auto";
+  try{
+    await new Promise((res,rej)=>{
+      video.onloadedmetadata=res;
+      video.onerror=()=>rej(new Error("não consegui abrir esse vídeo"));
+    });
+    if(!video.duration || video.duration<=segundos+1){
+      return arquivo; // já é curto, não precisa cortar
+    }
+    if(typeof MediaRecorder==="undefined" || !video.captureStream){
+      throw new Error("este navegador não sabe cortar vídeo (funciona no Chrome/Edge)");
+    }
+    const inicio=Math.max(0,video.duration/2-segundos/2);
+    await new Promise(res=>{ video.currentTime=inicio; video.onseeked=res; });
+
+    const canvas=document.createElement("canvas");
+    canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||360;
+    const ctx=canvas.getContext("2d");
+    const trilhas=[...canvas.captureStream(30).getVideoTracks()];
+    try{ trilhas.push(...video.captureStream().getAudioTracks()); }catch(e){}
+    const streamFinal=new MediaStream(trilhas);
+
+    const mime=MediaRecorder.isTypeSupported("video/mp4;codecs=avc1") ? "video/mp4;codecs=avc1"
+      : MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm";
+    const rec=new MediaRecorder(streamFinal,{mimeType:mime});
+    const pedacos=[];
+    rec.ondataavailable=e=>{ if(e.data.size) pedacos.push(e.data); };
+    const gravado=new Promise(res=>rec.onstop=res);
+
+    rec.start();
+    await video.play().catch(()=>{});
+    const fim=inicio+segundos;
+    await new Promise(res=>{
+      const passo=setInterval(()=>{
+        if(video.currentTime>=fim || video.paused || video.ended){ clearInterval(passo); res(); return; }
+        ctx.drawImage(video,0,0,canvas.width,canvas.height);
+      },33);
+    });
+    rec.stop(); video.pause();
+    await gravado;
+
+    const tipoFinal=mime.split(";")[0];
+    if(tipoFinal!=="video/mp4"){
+      throw new Error("esse navegador só gera em WebM, que não toca em todo iPhone — use Chrome ou Edge pra gerar em MP4");
+    }
+    return new File(pedacos,"previa.mp4",{type:tipoFinal});
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 async function sincronizaVideos(b,aviso){
   for(let i=0;i<b.videos.length;i++){
     const v=b.videos[i];
-    if(!v.blob && !v.arquivo) continue;
-    const chaveSinc=JSON.stringify({titulo:v.titulo,duracao:v.duracao,previa:!!v.previa,categoria:v.categoria||null,arquivo:v.arquivo||null,temBlob:!!v.blob});
+    if(!v.blob && !v.arquivo && !v.previaBlob) continue;
+    const chaveSinc=JSON.stringify({titulo:v.titulo,duracao:v.duracao,previa:!!v.previa,categoria:v.categoria||null,
+      arquivo:v.arquivo||null,temBlob:!!v.blob,temPreviaBlob:!!v.previaBlob});
     if(v.enviado && v.sincState===chaveSinc) continue;
     aviso("vídeo "+(i+1)+" de "+b.videos.length+"…");
     let pathPrevia=null, pathAlta=null, urlExterna=null, posterPath=null, bytes=null;
+
+    if(v.previa && v.previaBlob){
+      if(v.previaBlob.size>47_000_000){
+        throw new Error('A prévia do vídeo "'+(v.titulo||"sem título")+'" passa de 45MB — escolha um trecho mais curto.');
+      }
+      const dadosPrevia=new Uint8Array(await v.previaBlob.arrayBuffer());
+      pathPrevia=b.supabaseId+"/previa"+String(i+1).padStart(2,"0")+".mp4";
+      const rp=await sb.storage.from("previas").upload(pathPrevia,dadosPrevia,{contentType:"video/mp4",upsert:true});
+      if(rp.error) throw rp.error;
+      posterPath=b.supabaseId+"/poster.jpg";
+    }
+
     if(v.blob){
       if(v.blob.size>47_000_000){
         throw new Error('O vídeo "'+(v.titulo||"sem título")+'" passa de 45MB e não vai subir — cole um link (Drive) no lugar do arquivo pra esse.');
       }
       bytes=v.blob.size;
       const dados=new Uint8Array(await v.blob.arrayBuffer());
-      if(v.previa){
-        pathPrevia=b.supabaseId+"/previa"+String(i+1).padStart(2,"0")+".mp4";
-        const r=await sb.storage.from("previas").upload(pathPrevia,dados,{contentType:"video/mp4",upsert:true});
-        if(r.error) throw r.error;
-        posterPath=b.supabaseId+"/poster.jpg";
-      }else{
-        pathAlta=b.supabaseId+"/videos/v"+String(i+1).padStart(2,"0")+".mp4";
-        const r=await sb.storage.from("originais").upload(pathAlta,dados,{contentType:"video/mp4",upsert:true});
-        if(r.error) throw r.error;
-      }
+      pathAlta=b.supabaseId+"/videos/v"+String(i+1).padStart(2,"0")+".mp4";
+      const r=await sb.storage.from("originais").upload(pathAlta,dados,{contentType:"video/mp4",upsert:true});
+      if(r.error) throw r.error;
     }else if(v.arquivo){
       urlExterna=v.arquivo;
     }
+
     const linha={banda_id:b.supabaseId, ordem:i, titulo:v.titulo||"Vídeo", duracao:v.duracao||null,
       previa:!!v.previa, categoria:v.categoria||null, path_previa:pathPrevia, path_alta:pathAlta, url_externa:urlExterna,
       poster_path:posterPath, bytes:bytes};
@@ -1501,12 +1571,15 @@ function desenhaPainel(){
 
   /* ---- vídeos ---- */
   + '<div class="bloco"><div class="bhead"><div><span class="lbl">Audiovisual</span><h2>Vídeos</h2></div></div>'
-  + '<p class="dica">Cada música é um vídeo aqui embaixo. Arquivos pequenos (até 45MB — geralmente só o '
-  + '"melhores momentos") podem subir direto; músicas completas costumam ser grandes demais, então cole '
-  + 'o link do Google Drive nessas. Marque <b>prévia</b> em quantos quiser — cada um toca 30 segundos do '
-  + 'meio do vídeo pra quem ainda não pagou. Escolha a <b>categoria</b> de cada um: é ela que decide qual '
-  + 'pacote libera aquele vídeo (Melhores momentos libera só os de "Melhores momentos"; 2 músicas completas '
-  + 'libera só os de "Música completa"; o Pacote completo libera todos).</p>'
+  + '<p class="dica">Cada música é um vídeo aqui embaixo, com dois espaços separados. Na <b>prévia</b>, '
+  + 'escolha o vídeo (pode ser o arquivo inteiro, mesmo grande) e o sistema <b>corta sozinho</b> 15 ou 30 '
+  + 'segundos do meio, sem precisar subir o arquivo inteiro nem usar outro programa — só funciona no '
+  + 'Chrome ou no Edge. No <b>vídeo completo</b> (o que libera pra quem pagou), cole o link do Drive se o '
+  + 'arquivo passar de 45MB — normal pra música inteira. Um link do Drive <b>nunca toca</b> na tela, só '
+  + 'serve pro botão de baixar depois de liberado; por isso a prévia precisa ser esse trecho à parte. '
+  + 'Escolha a <b>categoria</b> de cada vídeo completo: é ela que decide qual pacote libera aquele vídeo '
+  + '(Melhores momentos libera só os de "Melhores momentos"; 2 músicas completas libera só os de "Música '
+  + 'completa"; o Pacote completo libera todos).</p>'
   + '<div id="vlista"></div><button class="btn" id="btAddVideo">+ Adicionar vídeo</button></div>'
 
   /* ---- downloads ---- */
@@ -1623,17 +1696,38 @@ function desenhaVideos(){
         + '<input type="text" data-va="'+i+'" placeholder="https://.../video.mp4" value="'+(v.arquivo||"").replace(/"/g,"&quot;")+'">'
         + '<span class="ou">ou <a href="#" data-vsobe="'+i+'" style="color:var(--red)">enviar o arquivo do PC</a></span></div>';
     }
-    return '<div class="vlinha">'
-    + '<input type="text" data-vt="'+i+'" placeholder="Título (ex: Música 1 — Sweet Child)" value="'+(v.titulo||"").replace(/"/g,"&quot;")+'">'
-    + '<input type="text" data-vd="'+i+'" placeholder="4:32" value="'+(v.duracao||"")+'">'
-    + meio
-    + '<select data-vc="'+i+'">'
-      + '<option value=""'+(!v.categoria?" selected":"")+'>Categoria…</option>'
-      + '<option value="melhores_momentos"'+(v.categoria==="melhores_momentos"?" selected":"")+'>Melhores momentos</option>'
-      + '<option value="completa"'+(v.categoria==="completa"?" selected":"")+'>Música completa</option>'
-    + '</select>'
-    + '<label class="prev"><input type="checkbox" data-vp="'+i+'"'+(v.previa?" checked":"")+'> prévia</label>'
-    + '<button class="del" data-vx="'+i+'">✕</button></div>';
+    let previaArea;
+    if(v.previaProcessando){
+      previaArea='<span class="vsub">cortando o vídeo, alguns segundos…</span>';
+    } else if(v.previaBlob){
+      const mb=v.previaBlob.size/1024/1024;
+      previaArea='<div class="vfile"><span class="nm">'+(v.previaNomeArq||"previa.mp4")+'</span>'
+        + '<span class="peso">'+(mb>=1?mb.toFixed(1).replace(".",","):"<1")+' MB</span>'
+        + '<button data-plimpa="'+i+'" title="Tirar o arquivo">✕</button></div>';
+    } else {
+      previaArea='<select data-pdur="'+i+'" style="width:auto;display:inline-block;margin-right:8px">'
+        + '<option value="30"'+((v.previaDuracao||30)==30?" selected":"")+'>30s</option>'
+        + '<option value="15"'+(v.previaDuracao==15?" selected":"")+'>15s</option>'
+        + '</select>'
+        + '<a href="#" data-psobe="'+i+'" style="color:var(--red)">escolher o vídeo (corta '+(v.previaDuracao||30)+'s do meio sozinho)</a>';
+    }
+    return '<div class="vcard">'
+    + '<div class="vhead">'
+      + '<input type="text" data-vt="'+i+'" placeholder="Título (ex: Música 1 — Sweet Child)" value="'+(v.titulo||"").replace(/"/g,"&quot;")+'">'
+      + '<input type="text" data-vd="'+i+'" placeholder="4:32" value="'+(v.duracao||"")+'">'
+      + '<select data-vc="'+i+'">'
+        + '<option value=""'+(!v.categoria?" selected":"")+'>Categoria…</option>'
+        + '<option value="melhores_momentos"'+(v.categoria==="melhores_momentos"?" selected":"")+'>Melhores momentos</option>'
+        + '<option value="completa"'+(v.categoria==="completa"?" selected":"")+'>Música completa</option>'
+      + '</select>'
+      + '<button class="del" data-vx="'+i+'">✕</button>'
+    + '</div>'
+    + '<div class="vbody">'
+      + '<div class="vslot"><label class="prev"><input type="checkbox" data-vp="'+i+'"'+(v.previa?" checked":"")+'> tem prévia</label>'
+        + (v.previa ? previaArea : '<span class="vsub">marque a caixa pra gerar um trecho curto que toca antes de pagar</span>')
+      + '</div>'
+      + '<div class="vslot"><span class="vslbl">Vídeo completo (o que libera com o pacote)</span>'+meio+'</div>'
+    + '</div></div>';
   }).join("");
   if(!b.videos.length) el.innerHTML='<div class="vazio">Nenhum vídeo. A página vai mostrar “Vídeo em edição”.</div>';
   el.oninput=async e=>{
@@ -1654,6 +1748,10 @@ function desenhaVideos(){
       b.videos[+t.dataset.vc].categoria=t.value||null;
       await gravar(b); return;
     }
+    if(t.dataset.pdur!==undefined){
+      b.videos[+t.dataset.pdur].previaDuracao=+t.value;
+      await gravar(b); desenhaVideos(); return;
+    }
   };
   el.onclick=async e=>{
     const sobe=e.target.closest("[data-vsobe]");
@@ -1670,6 +1768,37 @@ function desenhaVideos(){
       };
       inp.click();
       return;
+    }
+    const psobe=e.target.closest("[data-psobe]");
+    if(psobe){
+      e.preventDefault();
+      const i=+psobe.dataset.psobe;
+      const inp=document.createElement("input");
+      inp.type="file"; inp.accept="video/mp4,video/quicktime,video/*";
+      inp.onchange=async ev=>{
+        const f=ev.target.files[0]; if(!f) return;
+        let b=atual();
+        const segundos=b.videos[i].previaDuracao||30;
+        b.videos[i].previaProcessando=true; desenhaVideos();
+        try{
+          const cortado=await geraPrevia(f,segundos);
+          b=atual();
+          b.videos[i].previaBlob=cortado; b.videos[i].previaNomeArq="previa.mp4"; b.videos[i].previa=true;
+        }catch(err){
+          alert("Não consegui cortar esse vídeo automaticamente: "+err.message+"\n\nFunciona melhor no Chrome ou no Edge. Se continuar dando erro, pode enviar um clipe já cortado em outro programa.");
+          b=atual();
+        }
+        delete b.videos[i].previaProcessando;
+        await gravar(b); desenhaVideos();
+      };
+      inp.click();
+      return;
+    }
+    const plimpa=e.target.closest("[data-plimpa]");
+    if(plimpa){
+      const b=atual(), i=+plimpa.dataset.plimpa;
+      delete b.videos[i].previaBlob; delete b.videos[i].previaNomeArq;
+      await gravar(b); desenhaVideos(); return;
     }
     const limpa=e.target.closest("[data-vlimpa]");
     if(limpa){

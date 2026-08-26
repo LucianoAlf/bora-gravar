@@ -45,7 +45,8 @@ on conflict (user_id) do nothing;
 
 insert into public.admins_permitidos (email) values
   ('lucianoalf.la@gmail.com'),
-  ('yuristanzi@gmail.com')
+  ('yuristanzi@gmail.com'),
+  ('eujohnatansilva@gmail.com')
 on conflict do nothing;
 
 -- o default de bandas.token chama gera_token; o admin precisa poder executar

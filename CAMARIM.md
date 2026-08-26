@@ -149,9 +149,13 @@ publishable    sb_publishable__QJzWmwB7k2eVXkt1LOyag_26J72Q3h
 |---|---|
 | `lucianoalf.la@gmail.com` | Alf — dono |
 | `yuristanzi@gmail.com` | Yuri Stanzi — audiovisual |
+| `eujohnatansilva@gmail.com` | Johnatan — audiovisual |
 
-Ambos entram por e-mail + senha e já estão em `public.admins`.
-**Trocar a senha depois do primeiro login** (as duas foram criadas com a mesma).
+Os três entram por e-mail + senha e já estão em `public.admins`.
+Cada operador deve usar sua própria senha; Alf e Yuri ainda devem trocar as senhas iniciais.
+
+O acesso do Johnatan foi criado e validado em 26/08/2026. A Mesa de Som usa temporariamente
+`https://camarim-la-music.vercel.app` ao copiar os links, até o domínio oficial receber o CNAME.
 
 Para autorizar mais gente: basta inserir o e-mail em `public.admins_permitidos` **antes** de
 criar o usuário no painel. O trigger `trg_promove_admin` promove sozinho, sem SQL manual.

@@ -1136,6 +1136,7 @@ function remover(id){
    ============================================================ */
 const SUPABASE_URL="https://hpeyyamwoisehqylrdtx.supabase.co";
 const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwZXl5YW13b2lzZWhxeWxyZHR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2ODEyOTUsImV4cCI6MjEwMzI1NzI5NX0.PuameozNXedB46WdZjBcGwCWzTb3YGdROA3NRMjNHh8";
+const SITE_PUBLICO="https://camarim-la-music.vercel.app";
 let sb=null;
 async function iniciaSupabase(){
   const {createClient}=await import("https://esm.sh/@supabase/supabase-js@2");
@@ -1576,7 +1577,7 @@ function desenhaPainel(){
   + 'pro Supabase — se a conexão cair no meio do caminho, é só clicar em Publicar de novo que continua de onde parou.</span></div></div>'
 
   + '<div class="mhead"><div><span class="lbl">Banda</span><h1>'+b.nome+'</h1>'
-  + '<div class="linkrow"><span class="linkbox">camarim.lamusicschool.com.br/b/'+b.slug+'/</span>'
+  + '<div class="linkrow"><span class="linkbox">'+SITE_PUBLICO.replace(/^https?:\/\//,"")+'/b/'+b.slug+'/</span>'
   + '<button class="btn sm" id="btCopiar">Copiar link</button>'
   + '<span class="okmsg" id="okLink">Copiado</span></div></div></div>'
 
@@ -1642,7 +1643,7 @@ function ligaCampos(){
     });
   });
   $("btCopiar").addEventListener("click",async()=>{
-    const t="camarim.lamusicschool.com.br/b/"+atual().slug+"/";
+    const t=SITE_PUBLICO+"/b/"+atual().slug+"/";
     try{await navigator.clipboard.writeText(t);}catch(e){}
     const o=$("okLink"); o.classList.add("on"); setTimeout(()=>o.classList.remove("on"),1600);
   });

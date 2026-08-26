@@ -1230,8 +1230,22 @@ async function sincronizaBanda(b){
   b.supabaseId=data.id; b.chave=data.chave; await gravar(b);
 }
 
+/* ---- apaga do Supabase o que não está mais na lista local da Mesa de Som ----
+   A Mesa de Som é quem manda: se você tirou um vídeo/foto/link daqui, ele some
+   de lá também no próximo Publicar. Evita duplicata "fantasma" acumulada de
+   publicações antigas (arquivo em si no Storage fica pra trás, sem custo real). */
+async function removeOrfaos(tabela,b,idsLocais){
+  const {data,error}=await sb.from(tabela).select("id").eq("banda_id",b.supabaseId);
+  if(error) throw error;
+  const extras=(data||[]).map(r=>r.id).filter(id=>!idsLocais.includes(id));
+  if(extras.length){
+    const {error:e2}=await sb.from(tabela).delete().in("id",extras); if(e2) throw e2;
+  }
+}
+
 async function sincronizaFotos(b,aviso){
   if(b.capa===null) return;
+  await removeOrfaos("fotos",b,b.fotos.map(f=>f.fotoId).filter(Boolean));
   const marcaTxt=EVENTO_PADRAO.toUpperCase()+"  ·  PRÉVIA  ·  ";
   const capaFoto=b.fotos[b.capa];
   if(b.capaSincronizada!==capaFoto.id){
@@ -1293,6 +1307,22 @@ async function sincronizaFotos(b,aviso){
    Se o arquivo já for curto o bastante, usa ele do jeito que está.
    Senão, toca o trecho central num <video> escondido e regrava com
    MediaRecorder — sem precisar subir o arquivo inteiro pra lugar nenhum. */
+/* alguns .MOV/.MP4 (comum em vídeo de celular) não trazem a duração no
+   cabeçalho — o Chrome devolve Infinity/NaN até você forçar uma busca lá
+   no fim do arquivo. Sem isso, a conta de "onde fica o meio" sai errada. */
+async function pegaDuracaoReal(video){
+  if(isFinite(video.duration) && video.duration>0) return video.duration;
+  return new Promise(res=>{
+    const acabou=()=>{
+      video.currentTime=0;
+      res(isFinite(video.duration) ? video.duration : 0);
+    };
+    video.ontimeupdate=function(){ video.ontimeupdate=null; acabou(); };
+    video.currentTime=1e10;
+    setTimeout(()=>{ if(video.ontimeupdate){ video.ontimeupdate=null; acabou(); } },4000);
+  });
+}
+
 async function geraPrevia(arquivo,segundos){
   const url=URL.createObjectURL(arquivo);
   const video=document.createElement("video");
@@ -1302,13 +1332,17 @@ async function geraPrevia(arquivo,segundos){
       video.onloadedmetadata=res;
       video.onerror=()=>rej(new Error("não consegui abrir esse vídeo"));
     });
-    if(!video.duration || video.duration<=segundos+1){
+    const duracaoReal=await pegaDuracaoReal(video);
+    if(!duracaoReal){
+      throw new Error("não consegui descobrir a duração desse vídeo");
+    }
+    if(duracaoReal<=segundos+1){
       return arquivo; // já é curto, não precisa cortar
     }
     if(typeof MediaRecorder==="undefined" || !video.captureStream){
       throw new Error("este navegador não sabe cortar vídeo (funciona no Chrome/Edge)");
     }
-    const inicio=Math.max(0,video.duration/2-segundos/2);
+    const inicio=Math.max(0,duracaoReal/2-segundos/2);
     await new Promise(res=>{ video.currentTime=inicio; video.onseeked=res; });
 
     const canvas=document.createElement("canvas");
@@ -1327,10 +1361,11 @@ async function geraPrevia(arquivo,segundos){
 
     rec.start();
     await video.play().catch(()=>{});
-    const fim=inicio+segundos;
+    const fim=inicio+segundos, comecoReal=Date.now(), limiteMs=(segundos+10)*1000;
     await new Promise(res=>{
       const passo=setInterval(()=>{
-        if(video.currentTime>=fim || video.paused || video.ended){ clearInterval(passo); res(); return; }
+        const passouDoTempo=Date.now()-comecoReal>limiteMs; // trava de segurança, nunca deve chegar aqui
+        if(video.currentTime>=fim || video.paused || video.ended || passouDoTempo){ clearInterval(passo); res(); return; }
         ctx.drawImage(video,0,0,canvas.width,canvas.height);
       },33);
     });
@@ -1348,6 +1383,7 @@ async function geraPrevia(arquivo,segundos){
 }
 
 async function sincronizaVideos(b,aviso){
+  await removeOrfaos("videos",b,b.videos.map(v=>v.videoId).filter(Boolean));
   for(let i=0;i<b.videos.length;i++){
     const v=b.videos[i];
     if(!v.blob && !v.arquivo && !v.previaBlob) continue;
@@ -1397,6 +1433,7 @@ async function sincronizaVideos(b,aviso){
 
 async function sincronizaDownloads(b){
   if(!b.downloads) return;
+  await removeOrfaos("downloads",b,b.downloads.map(d=>d.downloadId).filter(Boolean));
   for(let i=0;i<b.downloads.length;i++){
     const d=b.downloads[i];
     if(!d.url) continue;

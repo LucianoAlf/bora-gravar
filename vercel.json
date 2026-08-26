@@ -3,7 +3,11 @@
   "outputDirectory": "site",
   "rewrites": [
     {
-      "source": "/b/:chave*",
+      "source": "/b/:chave",
+      "destination": "/pagina.html"
+    },
+    {
+      "source": "/b/:chave/",
       "destination": "/pagina.html"
     }
   ],

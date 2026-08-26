@@ -30,12 +30,13 @@ bora-gravar/
 ├── CAMARIM.md                    documento-mestre (regras, schema, segurança, backlog)
 ├── LEIA-ME.txt                   manual do Alf para o fluxo estático (Netlify manual)
 ├── README.md                     este arquivo
+├── vercel.json                   publica só site/, mantém /b/<chave>/ e aplica noindex
 ├── .env.example                  template das variáveis de ambiente
 ├── .env.local                    credenciais reais — NÃO versionado (.gitignore)
 │
-├── mesa-de-som.html              painel do admin (roda no navegador, NÃO sobe no Netlify)
+├── mesa-de-som.html              painel do admin (roda no navegador, NÃO sobe na Vercel)
 │
-├── site/                         frontend estático (o que vai para o Netlify)
+├── site/                         frontend estático (o que vai para a Vercel)
 │   ├── index.html                página inicial (quem chega sem link)
 │   ├── pagina.html               página real da banda — busca os dados no Supabase pela chave da URL
 │   ├── _redirects                Netlify: manda /b/* pra pagina.html (URL limpa)
@@ -65,7 +66,7 @@ bora-gravar/
 | Admins (`lucianoalf.la@gmail.com`, `yuristanzi@gmail.com`) | ✅ criados |
 | Página da banda (`site/pagina.html`, conectada ao Supabase) | 🟡 **código pronto e testado ponta a ponta com dados de teste** — falta um teste com uma banda de verdade, publicada pela Mesa de Som |
 | **Mesa de Som → Supabase** | 🟡 **código pronto, falta teste real** — login, upload e "Liberar banda" implementados; falta confirmar com login de admin de verdade |
-| Deploy Netlify + domínio | 🟡 pendente (CNAME no Registro.br) |
+| Deploy Vercel + domínio | 🟡 configuração pronta; falta importar o GitHub e apontar o CNAME no Registro.br |
 | Cadastro em lote das 26 bandas | 🟡 pendente |
 
 O backlog completo e priorizado está na **seção 12 do [`CAMARIM.md`](./CAMARIM.md)**.
@@ -78,7 +79,7 @@ A **`service_role` key** e o **access token `sbp_…`** são chaves de administr
 inteiro. Elas vivem **apenas** no `.env.local` (ignorado pelo Git) e no painel do Supabase.
 
 **Nunca** podem aparecer em:
-- qualquer arquivo dentro de `site/` (vai para o Netlify)
+- qualquer arquivo dentro de `site/` (vai para a Vercel)
 - qualquer JavaScript que rode no navegador, incluindo `mesa-de-som.html`
 - este README, o `CAMARIM.md` ou qualquer commit
 

@@ -87,7 +87,7 @@ Já foi reescrita uma vez e o Alf pediu a original de volta. Ela fica em destaqu
 
 ```
 ┌──────────────────────────────┐        ┌───────────────────────────────────┐
-│  NETLIFY  (frontend estático)│        │  SUPABASE  "Bora Gravar"          │
+│  VERCEL  (frontend estático) │        │  SUPABASE  "Bora Gravar"          │
 │                              │        │  sa-east-1 · Postgres 17          │
 │  /                index.html │        │                                   │
 │  /b/<slug>-<token>/          │◄──────►│  Postgres  (bandas/fotos/videos)  │
@@ -95,11 +95,11 @@ Já foi reescrita uma vez e o Alf pediu a original de volta. Ela fica em destaqu
 │         (lê window.DADOS ou  │  key   │            originais (privado)    │
 │          chama o Supabase)   │        │  Edge Fn   /functions/v1/camarim  │
 │  robots.txt  noindex         │        │  Auth      só admin (Alf, Yuri)   │
-│  _headers    X-Robots-Tag    │        │                                   │
+│  vercel.json: rota + noindex │        │                                   │
 └──────────────────────────────┘        └───────────────────────────────────┘
          ▲
          │  mesa-de-som.html  (painel do Alf — roda no navegador dele,
-         │                     NÃO sobe no Netlify)
+         │                     NÃO sobe na Vercel)
 ```
 
 **Por que Supabase e não só arquivo estático:** com arquivo estático, liberar uma banda exigia
@@ -134,7 +134,7 @@ publishable    sb_publishable__QJzWmwB7k2eVXkt1LOyag_26J72Q3h
 
 > A **service_role key** e o **access token `sbp_…`** são chaves de administrador do banco
 > inteiro. Elas **nunca** podem aparecer em:
-> - qualquer arquivo que suba no Netlify
+> - qualquer arquivo que suba na Vercel
 > - qualquer JavaScript que rode no navegador
 > - o `mesa-de-som.html`
 > - este documento, um README, ou um repositório
@@ -411,8 +411,8 @@ existindo, escondido num painel "Ferramentas de emergência", só para quando o 
 simular isso num agente porque exigiria digitar a senha real do admin.
 
 ### `site/pagina.html` — a página da banda 🟡 conectada ao Supabase, testada com dados sintéticos
-Substituiu o antigo `dados.js` estático: lê a chave da URL (`/b/<chave>/` via redirect do
-Netlify, ou `?chave=` direto), busca `acao=dados` na Edge Function, e quando liberado busca
+Substituiu o antigo `dados.js` estático: lê a chave da URL (`/b/<chave>/` via rewrite da
+Vercel, ou `?chave=` direto), busca `acao=dados` na Edge Function, e quando liberado busca
 também `acao=downloads` (pra pegar os links assinados das fotos em alta e trocar a grade de
 fotos pela versão sem marca). Testada ponta a ponta em 25/08/2026 com uma banda fake inserida
 direto no banco (fotos, vídeo, estado normal e liberado) — **passou**. Falta testar com uma
@@ -462,12 +462,13 @@ Ver detalhes na seção 11 (`site/pagina.html`). Testado com dados sintéticos i
 no banco; falta confirmar com uma banda publicada pela Mesa de Som de verdade.
 
 ### 3. Deploy 🟡
-- ✅ `site/_redirects` já manda `/b/*` pra `pagina.html` (Netlify, URL limpa) — feito em
-  25/08/2026. Localmente, `serve.json` na raiz replica o mesmo redirect pra testar sem subir
-  nada (`http://localhost:5757/b/<chave>/`).
-- Manter `robots.txt` `Disallow: /` e o header `X-Robots-Tag: noindex`.
-- Falta: publicar de verdade no Netlify e apontar o CNAME `camarim.lamusicschool.com.br` no
-  **Registro.br**. Pendente: o Alf ia mandar o print do painel.
+- ✅ `vercel.json` publica somente `site/`, manda `/b/*` pra `pagina.html` sem mudar a URL e
+  aplica `X-Robots-Tag: noindex, nofollow, noarchive` em todas as páginas. Localmente,
+  `serve.json` replica a rota para testar sem subir nada (`http://localhost:5757/b/<chave>/`).
+- ✅ `robots.txt` mantém `Disallow: /`. Os arquivos `_redirects` e `_headers` continuam em
+  `site/` apenas para compatibilidade com a Netlify, caso seja necessário voltar.
+- Falta: importar o repositório na Vercel e apontar o CNAME
+  `camarim.lamusicschool.com.br` no **Registro.br**.
 
 ### 4. Cadastro em lote das 26 bandas ✅ feito (parcial)
 As 26 bandas entram pré-cadastradas sozinhas na Mesa de Som (local, na primeira vez que abre

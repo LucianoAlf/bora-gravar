@@ -65,7 +65,7 @@ bora-gravar/
 | Edge Function `camarim` (links assinados) | ✅ no ar |
 | Admins (`lucianoalf.la@gmail.com`, `yuristanzi@gmail.com`, `eujohnatansilva@gmail.com`) | ✅ criados |
 | Página da banda (`site/pagina.html`, conectada ao Supabase) | 🟡 **código pronto e testado ponta a ponta com dados de teste** — falta um teste com uma banda de verdade, publicada pela Mesa de Som |
-| **Mesa de Som → Supabase** | 🟡 **código pronto, falta teste real** — login, upload e "Liberar banda" implementados; falta confirmar com login de admin de verdade |
+| **Mesa de Som → Supabase** | ✅ **sincronizada** — login, upload, liberação e leitura das bandas publicadas funcionam em qualquer navegador; verificada com 28 bandas, 395 fotos e 48 vídeos reais |
 | Deploy Vercel + domínio | 🟡 configuração pronta; falta importar o GitHub e apontar o CNAME no Registro.br |
 | Cadastro em lote das 26 bandas | 🟡 pendente |
 

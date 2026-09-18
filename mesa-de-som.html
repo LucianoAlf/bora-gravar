@@ -1110,9 +1110,18 @@ function salvaBanda(b){
 function gravar(b){
   return new Promise((ok,err)=>{
     const copia={...b,
-      fotos:b.fotos.map(f=>({id:f.id,nome:f.nome,blob:f.blob,cortesia:f.cortesia})),
-      videos:(b.videos||[]).map(v=>({titulo:v.titulo,duracao:v.duracao,arquivo:v.arquivo,
-        previa:v.previa,blob:v.blob,nomeArq:v.nomeArq}))};
+      fotos:b.fotos.map(f=>{
+        const copiaFoto={...f};
+        /* URL.createObjectURL deixa de valer quando o navegador fecha; URL pública não. */
+        if(f.blob && copiaFoto.url) delete copiaFoto.url;
+        return copiaFoto;
+      }),
+      videos:(b.videos||[]).map(v=>{
+        const copiaVideo={...v};
+        delete copiaVideo.previaProcessando;
+        return copiaVideo;
+      }),
+      downloads:(b.downloads||[]).map(d=>({...d}))};
     const t=DB.transaction("bandas","readwrite");
     t.objectStore("bandas").put(copia);
     t.oncomplete=ok; t.onerror=()=>err(new Error("não consegui salvar"));
@@ -1130,6 +1139,24 @@ function remover(id){
     t.objectStore("bandas").delete(id); t.oncomplete=ok;
   });
 }
+function substituirTudo(lista){
+  return new Promise((ok,err)=>{
+    const t=DB.transaction("bandas","readwrite"), loja=t.objectStore("bandas");
+    loja.clear();
+    lista.forEach(b=>{
+      const copia={...b,
+        fotos:(b.fotos||[]).map(f=>{
+          const x={...f}; if(f.blob && x.url) delete x.url; return x;
+        }),
+        videos:(b.videos||[]).map(v=>{
+          const x={...v}; delete x.previaProcessando; return x;
+        }),
+        downloads:(b.downloads||[]).map(d=>({...d}))};
+      loja.put(copia);
+    });
+    t.oncomplete=ok; t.onerror=()=>err(new Error("não consegui atualizar o banco local"));
+  });
+}
 
 /* ============================================================
    Supabase — login e publicação
@@ -1141,6 +1168,89 @@ let sb=null;
 async function iniciaSupabase(){
   const {createClient}=await import("https://esm.sh/@supabase/supabase-js@2");
   sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+}
+function urlPublica(path){
+  if(!path) return "";
+  return sb.storage.from("previas").getPublicUrl(path).data.publicUrl;
+}
+function chaveSincVideo(v){
+  return JSON.stringify({titulo:v.titulo,duracao:v.duracao,previa:!!v.previa,categoria:v.categoria||null,
+    arquivo:v.arquivo||null,temBlob:!!v.blob,temPreviaBlob:!!v.previaBlob});
+}
+function chaveSincDownload(d){
+  return JSON.stringify({titulo:d.titulo,descricao:d.descricao,tamanho:d.tamanho,url:d.url});
+}
+function dataCurta(iso){
+  if(!iso) return null;
+  return new Date(iso).toLocaleDateString("pt-BR",{day:"2-digit",month:"long"});
+}
+function bandaDoSupabase(r){
+  const fotos=(r.fotos||[]).sort((a,b)=>a.ordem-b.ordem).map(f=>({
+    id:"sb-foto-"+f.id, nome:f.nome_original||"foto.jpg", blob:null,
+    url:urlPublica(f.path_previa), cortesia:!!f.cortesia, enviado:true, pendenteLocal:false,
+    fotoId:f.id, pathPrevia:f.path_previa, pathAlta:f.path_alta,
+    cortesiaSincronizada:!!f.cortesia, ordemSincronizada:f.ordem
+  }));
+  const capa=(r.fotos||[]).sort((a,b)=>a.ordem-b.ordem).findIndex(f=>f.capa);
+  const videos=(r.videos||[]).sort((a,b)=>a.ordem-b.ordem).map(v=>{
+    const item={titulo:v.titulo||"Vídeo",duracao:v.duracao||"",arquivo:v.url_externa||"",
+      previa:!!v.previa,categoria:v.categoria||null,enviado:true,pendenteLocal:false,videoId:v.id,
+      remotePathPrevia:v.path_previa||null,remotePathAlta:v.path_alta||null,
+      remoteUrlExterna:v.url_externa||null,remotePosterPath:v.poster_path||null,
+      remoteBytes:v.bytes||null};
+    item.sincState=chaveSincVideo(item);
+    return item;
+  });
+  const downloads=(r.downloads||[]).sort((a,b)=>a.ordem-b.ordem).map(d=>{
+    const item={titulo:d.titulo||"Arquivo",descricao:d.descricao||"",tamanho:d.tamanho||"",
+      url:d.url||"",enviado:true,pendenteLocal:false,downloadId:d.id};
+    item.sincState=chaveSincDownload(item);
+    return item;
+  });
+  const estado=r.liberado ? "liberada" : r.estado;
+  return {
+    id:"sb-banda-"+r.id, nome:r.nome, slug:r.chave, fotos, capa:capa>=0?capa:(fotos.length?0:null),
+    videos, downloads, aberta:!!r.aberta, estado, valor:Number(r.valor||0),
+    pacote:r.pacote_comprado||"", liberadaEm:dataCurta(r.liberada_em),
+    supabaseId:r.id, chave:r.chave,
+    capaSincronizada:capa>=0?fotos[capa].id:null,
+    capaIdRemota:capa>=0?fotos[capa].fotoId:null, origem:"supabase"
+  };
+}
+async function carregaBandasSupabase(){
+  const {data,error}=await sb.from("bandas").select(`
+    id,nome,slug,token,chave,estado,aberta,liberado,pacote_comprado,valor,liberada_em,
+    fotos(id,ordem,nome_original,path_previa,path_alta,cortesia,capa,bytes),
+    videos(id,ordem,titulo,duracao,previa,categoria,path_previa,path_alta,url_externa,poster_path,bytes),
+    downloads(id,ordem,titulo,descricao,tamanho,url)
+  `).order("nome",{ascending:true});
+  if(error) throw error;
+  return (data||[]).map(bandaDoSupabase);
+}
+function rascunhoVazio(b){
+  return !b.supabaseId && b.estado==="rascunho" && !(b.fotos||[]).length
+    && !(b.videos||[]).length && !(b.downloads||[]).length;
+}
+function mesclaBandas(remotas,locais){
+  const usados=new Set(), resultado=[];
+  for(const remota of remotas){
+    const local=locais.find(b=>b.supabaseId===remota.supabaseId || (b.chave && b.chave===remota.chave));
+    if(local){
+      usados.add(local.id);
+      /* Arquivos novos ainda não publicados continuam no computador. */
+      remota.fotos.push(...(local.fotos||[]).filter(f=>f.pendenteLocal && !f.fotoId));
+      remota.videos.push(...(local.videos||[]).filter(v=>v.pendenteLocal && !v.videoId));
+      remota.downloads.push(...(local.downloads||[]).filter(d=>d.pendenteLocal && !d.downloadId));
+    }
+    resultado.push(remota);
+  }
+  for(const local of locais){
+    if(usados.has(local.id)) continue;
+    const jaExiste=remotas.some(r=>r.nome.toLocaleLowerCase("pt-BR")===local.nome.toLocaleLowerCase("pt-BR"));
+    if(jaExiste && rascunhoVazio(local)) continue;
+    resultado.push(local);
+  }
+  return resultado;
 }
 function exigeLogin(){
   return new Promise(async(ok)=>{
@@ -1247,6 +1357,14 @@ async function removeOrfaos(tabela,b,idsLocais){
   }
 }
 
+async function arquivoDaFoto(f){
+  if(f.blob) return f.blob;
+  if(!f.pathAlta) throw new Error('A foto "'+(f.nome||"sem nome")+'" não tem original no Supabase.');
+  const {data,error}=await sb.storage.from("originais").download(f.pathAlta);
+  if(error) throw error;
+  return data;
+}
+
 async function sincronizaFotos(b,aviso){
   if(b.capa===null) return;
   await removeOrfaos("fotos",b,b.fotos.map(f=>f.fotoId).filter(Boolean));
@@ -1254,7 +1372,7 @@ async function sincronizaFotos(b,aviso){
   const capaFoto=b.fotos[b.capa];
   if(b.capaSincronizada!==capaFoto.id){
     aviso("montando a capa…");
-    const imgCapa=await carrega(capaFoto.blob);
+    const imgCapa=await carrega(await arquivoDaFoto(capaFoto));
     const capaBytes=await paraBytes(recorta(imgCapa,1800,1010,0.34),0.82);
     const posterBytes=await paraBytes(marcaDagua(recorta(imgCapa,1280,720,0.30),marcaTxt),0.80);
     let r=await sb.storage.from("previas").upload(b.supabaseId+"/capa.jpg",capaBytes,{contentType:"image/jpeg",upsert:true});
@@ -1273,20 +1391,20 @@ async function sincronizaFotos(b,aviso){
     const f=b.fotos[i], ehCort=f.cortesia||b.capa===i, n=String(i+1).padStart(2,"0");
     if(f.enviado && f.cortesiaSincronizada===ehCort && f.ordemSincronizada===i) continue;
     aviso("foto "+(i+1)+" de "+b.fotos.length+"…");
-    const img=await carrega(f.blob);
+    const img=await carrega(await arquivoDaFoto(f));
     const altaBytes=await paraBytes(paraCanvas(img,1600),0.84);
-    const pathAlta=b.supabaseId+"/fotos/f"+n+".jpg";
+    const pathAlta=f.pathAlta||b.supabaseId+"/fotos/f"+n+".jpg";
     if(!f.enviado){
       const r=await sb.storage.from("originais").upload(pathAlta,altaBytes,{contentType:"image/jpeg",upsert:true});
       if(r.error) throw r.error;
     }
-    let pathPrevia;
+    let pathPrevia=f.pathPrevia||null;
     if(ehCort){
-      pathPrevia=b.supabaseId+"/c"+n+".jpg";
+      pathPrevia=pathPrevia||b.supabaseId+"/c"+n+".jpg";
       const r=await sb.storage.from("previas").upload(pathPrevia,altaBytes,{contentType:"image/jpeg",upsert:true});
       if(r.error) throw r.error;
     }else{
-      pathPrevia=b.supabaseId+"/w"+n+".jpg";
+      pathPrevia=pathPrevia||b.supabaseId+"/w"+n+".jpg";
       const wmBytes=await paraBytes(marcaDagua(paraCanvas(img,1100),marcaTxt),0.78);
       const r=await sb.storage.from("previas").upload(pathPrevia,wmBytes,{contentType:"image/jpeg",upsert:true});
       if(r.error) throw r.error;
@@ -1301,7 +1419,9 @@ async function sincronizaFotos(b,aviso){
       f.fotoId=data.id;
     }
     if(i===b.capa) b.capaIdRemota=f.fotoId;
-    f.enviado=true; f.cortesiaSincronizada=ehCort; f.ordemSincronizada=i;
+    f.enviado=true; f.pendenteLocal=false; f.cortesiaSincronizada=ehCort; f.ordemSincronizada=i;
+    f.pathPrevia=pathPrevia; f.pathAlta=pathAlta;
+    f.url=urlPublica(pathPrevia)+"?v="+Date.now();
     await gravar(b);
     await new Promise(r=>setTimeout(r,0));
   }
@@ -1390,19 +1510,20 @@ async function sincronizaVideos(b,aviso){
   await removeOrfaos("videos",b,b.videos.map(v=>v.videoId).filter(Boolean));
   for(let i=0;i<b.videos.length;i++){
     const v=b.videos[i];
-    if(!v.blob && !v.arquivo && !v.previaBlob) continue;
-    const chaveSinc=JSON.stringify({titulo:v.titulo,duracao:v.duracao,previa:!!v.previa,categoria:v.categoria||null,
-      arquivo:v.arquivo||null,temBlob:!!v.blob,temPreviaBlob:!!v.previaBlob});
+    if(!v.blob && !v.arquivo && !v.previaBlob && !v.videoId) continue;
+    const chaveSinc=chaveSincVideo(v);
     if(v.enviado && v.sincState===chaveSinc) continue;
     aviso("vídeo "+(i+1)+" de "+b.videos.length+"…");
-    let pathPrevia=null, pathAlta=null, urlExterna=null, posterPath=null, bytes=null;
+    let pathPrevia=v.remotePathPrevia||null, pathAlta=v.remotePathAlta||null,
+      urlExterna=v.remoteUrlExterna||null, posterPath=v.remotePosterPath||null,
+      bytes=v.remoteBytes||null;
 
     if(v.previa && v.previaBlob){
       if(v.previaBlob.size>47_000_000){
         throw new Error('A prévia do vídeo "'+(v.titulo||"sem título")+'" passa de 45MB — escolha um trecho mais curto.');
       }
       const dadosPrevia=new Uint8Array(await v.previaBlob.arrayBuffer());
-      pathPrevia=b.supabaseId+"/previa"+String(i+1).padStart(2,"0")+".mp4";
+      pathPrevia=pathPrevia||b.supabaseId+"/previa"+String(i+1).padStart(2,"0")+".mp4";
       const rp=await sb.storage.from("previas").upload(pathPrevia,dadosPrevia,{contentType:"video/mp4",upsert:true});
       if(rp.error) throw rp.error;
       posterPath=b.supabaseId+"/poster.jpg";
@@ -1414,11 +1535,11 @@ async function sincronizaVideos(b,aviso){
       }
       bytes=v.blob.size;
       const dados=new Uint8Array(await v.blob.arrayBuffer());
-      pathAlta=b.supabaseId+"/videos/v"+String(i+1).padStart(2,"0")+".mp4";
+      pathAlta=pathAlta||b.supabaseId+"/videos/v"+String(i+1).padStart(2,"0")+".mp4";
       const r=await sb.storage.from("originais").upload(pathAlta,dados,{contentType:"video/mp4",upsert:true});
       if(r.error) throw r.error;
-    }else if(v.arquivo){
-      urlExterna=v.arquivo;
+    }else{
+      urlExterna=v.arquivo||null;
     }
 
     const linha={banda_id:b.supabaseId, ordem:i, titulo:v.titulo||"Vídeo", duracao:v.duracao||null,
@@ -1430,7 +1551,9 @@ async function sincronizaVideos(b,aviso){
       const {data,error}=await sb.from("videos").insert(linha).select("id").single(); if(error) throw error;
       v.videoId=data.id;
     }
-    v.enviado=true; v.sincState=chaveSinc;
+    v.enviado=true; v.pendenteLocal=false; v.sincState=chaveSinc;
+    v.remotePathPrevia=pathPrevia; v.remotePathAlta=pathAlta;
+    v.remoteUrlExterna=urlExterna; v.remotePosterPath=posterPath; v.remoteBytes=bytes;
     await gravar(b);
   }
 }
@@ -1441,7 +1564,7 @@ async function sincronizaDownloads(b){
   for(let i=0;i<b.downloads.length;i++){
     const d=b.downloads[i];
     if(!d.url) continue;
-    const chaveSinc=JSON.stringify({titulo:d.titulo,descricao:d.descricao,tamanho:d.tamanho,url:d.url});
+    const chaveSinc=chaveSincDownload(d);
     if(d.enviado && d.sincState===chaveSinc) continue;
     const linha={banda_id:b.supabaseId, ordem:i, titulo:d.titulo||"Arquivo",
       descricao:d.descricao||null, tamanho:d.tamanho||null, url:d.url};
@@ -1451,7 +1574,7 @@ async function sincronizaDownloads(b){
       const {data,error}=await sb.from("downloads").insert(linha).select("id").single(); if(error) throw error;
       d.downloadId=data.id;
     }
-    d.enviado=true; d.sincState=chaveSinc;
+    d.enviado=true; d.pendenteLocal=false; d.sincState=chaveSinc;
     await gravar(b);
   }
 }
@@ -1575,9 +1698,9 @@ function desenhaPainel(){
   const comMarca=b.fotos.length-cortesias;
 
   $("painel").innerHTML =
-  '<div class="aviso"><span class="ic">i</span><div><b>Nada se perde se a internet cair</b>'
-  + '<span>As fotos ficam guardadas aqui no computador até você clicar em "Publicar". Aí sim elas sobem '
-  + 'pro Supabase — se a conexão cair no meio do caminho, é só clicar em Publicar de novo que continua de onde parou.</span></div></div>'
+  '<div class="aviso"><span class="ic">i</span><div><b>Esta Mesa está sincronizada com o Supabase</b>'
+  + '<span>As bandas já publicadas aparecem para Yuri, John e Alf em qualquer navegador. Arquivos novos ficam '
+  + 'guardados neste computador até você clicar em "Publicar"; se a internet cair, é só publicar de novo.</span></div></div>'
 
   + '<div class="mhead"><div><span class="lbl">Banda</span><h1>'+b.nome+'</h1>'
   + '<div class="linkrow"><span class="linkbox">'+SITE_PUBLICO.replace(/^https?:\/\//,"")+'/b/'+chavePublica(b)+'/</span>'
@@ -1664,14 +1787,14 @@ function ligaCampos(){
   $("btAddVideo").addEventListener("click",async()=>{
     const b=atual();
     b.videos.push({titulo:"",duracao:"",arquivo:"",previa:b.videos.length===0,
-      enviado:false, videoId:null, sincState:null});
+      enviado:false, pendenteLocal:true, videoId:null, sincState:null});
     await gravar(b); desenhaVideos();
   });
   $("btAddDl").addEventListener("click",async()=>{
     const b=atual();
     if(!b.downloads) b.downloads=[];
     b.downloads.push({titulo:"",descricao:"",tamanho:"",url:"",
-      enviado:false, downloadId:null, sincState:null});
+      enviado:false, pendenteLocal:true, downloadId:null, sincState:null});
     await gravar(b); desenhaDownloads();
   });
 }
@@ -1681,7 +1804,7 @@ async function addFotos(lista){
   const b=atual();
   [...lista].filter(f=>/^image\/(jpeg|png)$/.test(f.type)).forEach(f=>{
     b.fotos.push({id:novoId(), nome:f.name, blob:f, cortesia:b.aberta,
-      enviado:false, fotoId:null, cortesiaSincronizada:null, ordemSincronizada:null});
+      enviado:false, pendenteLocal:true, fotoId:null, cortesiaSincronizada:null, ordemSincronizada:null});
   });
   if(b.capa===null && b.fotos.length) b.capa=0;
   await gravar(b); desenhaTudo();
@@ -1732,6 +1855,10 @@ function desenhaVideos(){
         + '<span class="vsub'+(mb>45?" alerta":"")+'">'
         + (mb>45 ? "passa de 45MB — não vai subir, use um link (Drive) em vez do arquivo" : "vai junto no site")
         + '</span></div>';
+    } else if(v.remotePathAlta){
+      meio='<div class="vcell"><div class="vfile"><span class="nm">Vídeo já publicado no Supabase</span>'
+        + '<span class="peso">salvo</span></div>'
+        + '<span class="ou"><a href="#" data-vsobe="'+i+'" style="color:var(--red)">substituir pelo arquivo do PC</a></span></div>';
     } else {
       meio='<div class="vcell">'
         + '<input type="text" data-va="'+i+'" placeholder="https://.../video.mp4" value="'+(v.arquivo||"").replace(/"/g,"&quot;")+'">'
@@ -1745,6 +1872,10 @@ function desenhaVideos(){
       previaArea='<div class="vfile"><span class="nm">'+(v.previaNomeArq||"previa.mp4")+'</span>'
         + '<span class="peso">'+(mb>=1?mb.toFixed(1).replace(".",","):"<1")+' MB</span>'
         + '<button data-plimpa="'+i+'" title="Tirar o arquivo">✕</button></div>';
+    } else if(v.remotePathPrevia){
+      previaArea='<div class="vfile"><span class="nm">Prévia já publicada no Supabase</span>'
+        + '<span class="peso">salva</span></div>'
+        + '<span class="ou"><a href="#" data-psobe="'+i+'" style="color:var(--red)">substituir a prévia</a></span>';
     } else {
       previaArea='<select data-pdur="'+i+'" style="width:auto;display:inline-block;margin-right:8px">'
         + '<option value="30"'+((v.previaDuracao||30)==30?" selected":"")+'>30s</option>'
@@ -2135,18 +2266,35 @@ $("btGerarTudo").addEventListener("click",()=>{
   await iniciaSupabase();
   ligaSair();
   await exigeLogin();
+  let locais=[];
   try{
     await abreDB();
-    bandas=await lerTudo();
+    locais=await lerTudo();
+    $("prog").classList.add("on");
+    $("progTt").textContent="Sincronizando";
+    $("progSub").textContent="buscando as bandas no Supabase…";
+    $("progFita").style.width="55%";
+    const remotas=await carregaBandasSupabase();
+    bandas=mesclaBandas(remotas,locais);
     if(bandas.length===0){
       for(const nome of NOMES_BANDAS){
         const b=bandaNova(nome);
         bandas.push(b);
-        await gravar(b);
       }
     }
     bandas.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
-  }catch(e){ bandas=[]; }
+    await substituirTudo(bandas);
+    $("progFita").style.width="100%";
+  }catch(e){
+    console.error("Não foi possível sincronizar a Mesa de Som",e);
+    bandas=locais;
+    if(!bandas.length){
+      for(const nome of NOMES_BANDAS) bandas.push(bandaNova(nome));
+    }
+    setTimeout(()=>alert("Não consegui buscar as bandas no Supabase. A Mesa abriu a cópia deste navegador.\n\n"+e.message),100);
+  }finally{
+    $("prog").classList.remove("on");
+  }
   desenhaTudo();
 })();
 </script>

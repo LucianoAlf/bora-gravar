@@ -5,7 +5,7 @@
 > continuar o desenvolvimento, e pelo Alf, que opera a plataforma no dia a dia.
 > Tudo que está descrito aqui como "pronto" já está aplicado e testado no Supabase.
 >
-> Última atualização: 25/08/2026
+> Última atualização: 18/09/2026
 
 ---
 
@@ -404,15 +404,20 @@ ligam/desligam as classes `.so-previa` / `.so-liberado`.
 
 ## 11. Estado atual do frontend
 
-### `mesa-de-som.html` — o painel do Alf 🟡 migrado, falta teste com login real
+### `mesa-de-som.html` — o painel administrativo ✅ sincronizado
 Login por e-mail/senha, upload pro Supabase (fotos + vídeo completo) e botão **Liberar
 banda** já implementados (25/08/2026). Interface simplificada: sumiram os campos que eram
 iguais pra todas as bandas (evento/data/local/prazo/validade/WhatsApp — viraram constantes);
 as 26 bandas já entram pré-cadastradas na primeira vez que abre. O motor antigo (arrastar
 fotos, marca d'água em Canvas, redimensionar) foi preservado; o gerador de zip continua
 existindo, escondido num painel "Ferramentas de emergência", só para quando o Supabase cair.
-**Falta**: alguém com login de admin de verdade testar o fluxo completo uma vez — não dá pra
-simular isso num agente porque exigiria digitar a senha real do admin.
+
+Em 18/09/2026, a Mesa passou a carregar no login todas as bandas, fotos, vídeos e liberações
+diretamente do Supabase. O IndexedDB do navegador virou apenas cache e proteção dos arquivos
+novos ainda não publicados. Assim, Alf, Yuri e Johnatan veem e administram a mesma lista em
+qualquer navegador. A leitura foi verificada contra produção: 28 bandas, 395 fotos e 48 vídeos.
+Ao republicar uma banda existente, a Mesa preserva os arquivos remotos e só envia novamente o
+que foi alterado.
 
 ### `site/pagina.html` — a página da banda 🟡 conectada ao Supabase, testada com dados sintéticos
 Substituiu o antigo `dados.js` estático: lê a chave da URL (`/b/<chave>/` via rewrite da
@@ -456,10 +461,9 @@ importantes pra quem mexer nisso depois:
 
 Em ordem. O item 1 é o que destrava tudo.
 
-### 1. Migrar a Mesa de Som para o Supabase 🟡 falta teste com login real
-Ver detalhes na seção 11. O que falta: alguém com acesso de admin de verdade logar, publicar
-uma banda de verdade (fotos + vídeo) e clicar em Liberar, uma vez, pra confirmar o fluxo
-inteiro.
+### 1. Migrar a Mesa de Som para o Supabase ✅ feito
+Ver detalhes na seção 11. A Mesa agora usa o Supabase como fonte principal e mantém apenas
+rascunhos e arquivos ainda não publicados no navegador.
 
 ### 2. Ligar a página da banda no Supabase 🟡 falta teste com uma banda real
 Ver detalhes na seção 11 (`site/pagina.html`). Testado com dados sintéticos inseridos direto

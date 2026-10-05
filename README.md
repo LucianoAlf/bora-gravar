@@ -1,7 +1,15 @@
 # Camarim — LA Music
 
-> Plataforma de entrega e venda do material audiovisual do **Julina Rock Fest 2026**.
+> Plataforma de entrega e venda de material audiovisual da LA Music.
 > Repositório **privado**. Backend no ar, frontend em migração para o Supabase.
+
+O projeto agora tem dois fluxos independentes no mesmo código:
+
+- **Julina Rock Fest:** o Camarim original por banda, preservado sem mudanças nas regras.
+- **Entregas por aluno/família:** plataforma reutilizável para o Vocal Kids e eventos futuros,
+  com uma página privada por link e sincronização somente de leitura com o CRM.
+
+> 📦 A documentação da plataforma reutilizável está em [`ENTREGAS.md`](./ENTREGAS.md).
 
 A LA Music (escola de música, Rio de Janeiro) filmou e fotografou **26 bandas de alunos**
 no Julina Rock Fest 2026. O Camarim é onde esse material é **mostrado** e **vendido**: cada
@@ -35,17 +43,21 @@ bora-gravar/
 ├── .env.local                    credenciais reais — NÃO versionado (.gitignore)
 │
 ├── mesa-de-som.html              painel do admin (roda no navegador, NÃO sobe na Vercel)
+├── mesa-de-entregas.html         painel de entregas por aluno/família (NÃO sobe na Vercel)
 │
 ├── site/                         frontend estático (o que vai para a Vercel)
 │   ├── index.html                página inicial (quem chega sem link)
 │   ├── pagina.html               página real da banda — busca os dados no Supabase pela chave da URL
+│   ├── entrega.html              página privada de entrega por aluno/família (`/e/<chave>/`)
 │   ├── _redirects                Netlify: manda /b/* pra pagina.html (URL limpa)
 │   ├── robots.txt                Disallow: / — mantém fora do Google
 │   ├── _headers                  X-Robots-Tag: noindex
 │   └── b/crowns-x7k92m/          protótipo antigo (dados.js estático) — mantido só de referência
 │
 └── supabase/                     backend (já aplicado no projeto hpeyyamwoisehqylrdtx)
-    ├── functions/camarim/index.ts        Edge Function de download (links assinados 1h)
+    ├── functions/camarim/index.ts        Edge Function do Julina (links assinados 1h)
+    ├── functions/entrega/index.ts        portal privado por aluno/família
+    ├── functions/entregas-admin/index.ts sincronização segura com o CRM
     └── migrations/
         ├── 20260825_0001_schema.sql      tabelas, tipos, triggers, índices
         ├── 20260825_0002_buckets.sql     previas (público) / originais (privado)
@@ -66,6 +78,7 @@ bora-gravar/
 | Admins (`lucianoalf.la@gmail.com`, `yuristanzi@gmail.com`, `eujohnatansilva@gmail.com`) | ✅ criados |
 | Página da banda (`site/pagina.html`, conectada ao Supabase) | 🟡 **código pronto e testado ponta a ponta com dados de teste** — falta um teste com uma banda de verdade, publicada pela Mesa de Som |
 | **Mesa de Som → Supabase** | ✅ **sincronizada** — login, upload, liberação e leitura das bandas publicadas funcionam em qualquer navegador; verificada com 28 bandas, 395 fotos e 48 vídeos reais |
+| **Entregas multi-eventos** | ✅ **no ar** — banco, painel, portal privado e sincronização do CRM prontos; Vocal Kids iniciado com os contratantes do CRM em rascunho |
 | Deploy Vercel + domínio | 🟡 configuração pronta; falta importar o GitHub e apontar o CNAME no Registro.br |
 | Cadastro em lote das 26 bandas | 🟡 pendente |
 
@@ -104,9 +117,11 @@ supabase link --project-ref hpeyyamwoisehqylrdtx
 | O quê | Como |
 |---|---|
 | **Mesa de Som** (painel do admin) | Abrir `mesa-de-som.html` no navegador (duplo clique) |
+| **Mesa de Entregas** (eventos novos) | Abrir `mesa-de-entregas.html`, entrar e escolher o evento |
 | **Site** (frontend) | Servir a pasta `site/` estático — ex.: `npx serve site` |
 | **Migrations** (ambiente novo) | `supabase db push` — reconstrói o banco do zero |
 | **Edge Function** | `supabase functions deploy camarim` |
+| **Edge Functions de entrega** | `supabase functions deploy entrega` e `supabase functions deploy entregas-admin` |
 
 > As migrations **já estão aplicadas** no projeto de produção `hpeyyamwoisehqylrdtx`.
 > Só rode `supabase db push` se estiver montando um ambiente limpo.

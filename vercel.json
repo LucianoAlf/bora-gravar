@@ -9,6 +9,14 @@
     {
       "source": "/b/:chave/",
       "destination": "/pagina.html"
+    },
+    {
+      "source": "/e/:chave",
+      "destination": "/entrega.html"
+    },
+    {
+      "source": "/e/:chave/",
+      "destination": "/entrega.html"
     }
   ],
   "headers": [

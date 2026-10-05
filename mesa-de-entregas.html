@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mesa de Entregas · Bora Gravar</title>
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--ink:#090708;--surface:#151112;--surface2:#1c1617;--line:#332728;--line2:#493638;--red:#e23127;--red2:#ff5b50;--paper:#f8f3f1;--text:#eee7e5;--muted:#a89592;--ok:#50b785;--warn:#e4a64c;--radius:15px;--display:Anton,'Arial Narrow',Impact,sans-serif;--body:Archivo,Arial,sans-serif;--mono:'IBM Plex Mono',monospace}
+    *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body);font-size:16px}button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+    .login{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:radial-gradient(circle at 50% 25%,#251516 0,var(--ink) 48%);padding:24px}.login-card{width:min(390px,100%);border:1px solid var(--line);border-radius:22px;background:rgba(21,17,18,.94);padding:32px;box-shadow:0 30px 80px #0008}.brand{font-family:var(--display);font-size:34px;line-height:1;text-transform:uppercase;letter-spacing:.03em}.brand b{color:var(--red);font-weight:400}.login-card p{color:var(--muted);line-height:1.55}.field{display:grid;gap:7px;margin:15px 0}.field span,.eyebrow{font:600 12px/1.2 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}input,select,textarea{width:100%;border:1px solid var(--line2);background:#0f0c0d;color:var(--text);border-radius:10px;padding:12px 13px;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--red)}.btn{border:1px solid var(--line2);border-radius:10px;padding:11px 14px;background:var(--surface2);color:var(--text);font-weight:700}.btn:hover{border-color:#785154}.btn.primary{background:var(--red);border-color:var(--red);color:white}.btn.primary:hover{background:var(--red2)}.btn.ghost{background:transparent}.btn.danger{color:#ff8e87}.btn:disabled{opacity:.45;cursor:not-allowed}.wide{width:100%}.error{min-height:20px;color:#ff8e87;font:13px var(--mono)}
+    .app{min-height:100%;display:grid;grid-template-rows:auto 1fr}.top{min-height:72px;display:flex;align-items:center;gap:18px;padding:14px 22px;border-bottom:1px solid var(--line);background:#0d0a0bcc;backdrop-filter:blur(16px);position:sticky;top:0;z-index:5}.top .brand{font-size:27px;white-space:nowrap}.event-picker{display:flex;align-items:center;gap:9px;min-width:0;flex:1}.event-picker select{width:min(390px,100%)}.top-actions{display:flex;gap:8px}.shell{min-height:0;display:grid;grid-template-columns:380px 1fr}.rail{border-right:1px solid var(--line);min-height:0;background:#0e0b0c;display:flex;flex-direction:column}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:16px}.metric{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px}.metric strong{display:block;font:28px/1 var(--display);color:var(--paper)}.metric span{display:block;margin-top:5px;color:var(--muted);font:10px/1.3 var(--mono);text-transform:uppercase}.rail-tools{padding:0 16px 13px;display:grid;grid-template-columns:1fr auto;gap:8px}.sync-note{padding:0 16px 13px;color:var(--muted);font-size:13px;line-height:1.45}.delivery-list{overflow:auto;padding:0 9px 18px}.delivery{width:100%;display:grid;grid-template-columns:46px 1fr auto;gap:10px;align-items:center;text-align:left;border:1px solid transparent;border-radius:13px;background:transparent;color:var(--text);padding:10px;margin:2px 0}.delivery:hover{background:var(--surface)}.delivery.active{background:var(--surface2);border-color:var(--line2)}.avatar{width:46px;height:46px;border-radius:50%;background:#2a1e20;display:grid;place-items:center;font:18px var(--display);overflow:hidden;position:relative}.avatar img{width:100%;height:100%;object-fit:cover}.delivery b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.delivery small{display:block;margin-top:4px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.status{font:600 10px/1 var(--mono);text-transform:uppercase;border:1px solid var(--line2);border-radius:999px;padding:6px 7px;color:var(--muted)}.status.liberada{border-color:#34795a;color:#83d7ab}.status.publicada{border-color:#815f2c;color:#f0bd69}.content{min-width:0;overflow:auto;padding:28px}.empty{min-height:60vh;display:grid;place-items:center;text-align:center;color:var(--muted)}.empty .big{font:54px var(--display);color:#3a2b2d}.detail{max-width:1120px;margin:0 auto}.detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:22px;margin-bottom:20px}.detail-head h1{font:clamp(35px,5vw,64px)/.98 var(--display);letter-spacing:.01em;text-transform:uppercase;margin:6px 0 9px;color:var(--paper)}.meta{color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}.head-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px}.card{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:18px}.card h2{margin:0 0 15px;font-size:18px}.info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.info{border-top:1px solid var(--line);padding-top:10px}.info span{display:block;color:var(--muted);font:10px var(--mono);text-transform:uppercase;letter-spacing:.08em}.info b{display:block;margin-top:5px}.drop{border:1px dashed #694447;border-radius:14px;padding:30px 18px;text-align:center;background:#100c0d;color:var(--muted);transition:.2s}.drop.drag{border-color:var(--red);background:#1e1011;color:var(--text)}.drop b{display:block;color:var(--paper);margin-bottom:7px}.drop input{display:none}.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:14px}.media{position:relative;border:1px solid var(--line);border-radius:12px;background:#0d0b0b;overflow:hidden;min-height:150px}.media img,.media video{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#080607}.file-icon{aspect-ratio:4/3;display:grid;place-items:center;font:42px var(--display);color:#67494c}.media-label{padding:9px}.media-label b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.media-label small{color:var(--muted)}.media-remove{position:absolute;right:7px;top:7px;border:0;border-radius:50%;width:30px;height:30px;background:#090708dd;color:white;font-size:18px}.progress{height:8px;background:#2a2021;border-radius:99px;overflow:hidden;margin-top:11px}.progress i{display:block;height:100%;width:0;background:var(--red);transition:width .2s}.progress-text{font:12px var(--mono);color:var(--muted);margin-top:8px}.link-box{display:flex;gap:7px;margin-top:12px}.link-box input{font:12px var(--mono);color:#c7b8b5}.participants{display:grid;gap:8px}.person{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:11px;padding:9px}.person .avatar{width:38px;height:38px}.person small{display:block;color:var(--muted)}dialog{border:1px solid var(--line2);border-radius:18px;background:var(--surface);color:var(--text);padding:0;width:min(520px,calc(100% - 28px));box-shadow:0 30px 100px #000a}dialog::backdrop{background:#000b}.dialog-body{padding:24px}.dialog-body h2{font:30px var(--display);text-transform:uppercase;margin:0}.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.toast{position:fixed;right:22px;bottom:22px;z-index:40;background:var(--paper);color:#211719;border-radius:12px;padding:13px 16px;box-shadow:0 15px 50px #0008;font-weight:700;max-width:min(420px,calc(100% - 44px));transform:translateY(20px);opacity:0;pointer-events:none;transition:.2s}.toast.on{transform:translateY(0);opacity:1}
+    @media(max-width:900px){.top{flex-wrap:wrap}.event-picker{order:3;width:100%}.shell{grid-template-columns:1fr}.rail{max-height:42vh;border-right:0;border-bottom:1px solid var(--line)}.content{padding:20px 14px}.grid{grid-template-columns:1fr}.detail-head{display:block}.head-actions{justify-content:flex-start;margin-top:15px}.top-actions .label{display:none}}@media(max-width:520px){.top{padding:12px}.summary{padding:12px}.metric strong{font-size:23px}.detail-head h1{font-size:40px}.info-grid{grid-template-columns:1fr}.media-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.head-actions .btn{flex:1}.card{padding:14px}}
+  </style>
+</head>
+<body>
+  <section class="login" id="login">
+    <form class="login-card" id="loginForm">
+      <div class="brand">Mesa de <b>Entregas</b></div>
+      <p>Entre com o mesmo acesso administrativo do Camarim.</p>
+      <label class="field"><span>E-mail</span><input id="email" type="email" autocomplete="username" required></label>
+      <label class="field"><span>Senha</span><input id="password" type="password" autocomplete="current-password" required></label>
+      <div class="error" id="loginError"></div>
+      <button class="btn primary wide" type="submit">Entrar</button>
+    </form>
+  </section>
+
+  <div class="app hidden" id="app">
+    <header class="top">
+      <div class="brand">Camarim <b>Bora Gravar</b></div>
+      <div class="event-picker"><span class="eyebrow">Evento</span><select id="eventSelect"></select></div>
+      <div class="top-actions"><button class="btn ghost" id="newEvent"><span class="label">Novo </span>evento</button><button class="btn ghost" id="signOut">Sair</button></div>
+    </header>
+    <div class="shell">
+      <aside class="rail">
+        <div class="summary">
+          <div class="metric"><strong id="countAll">0</strong><span>entregas</span></div>
+          <div class="metric"><strong id="countReady">0</strong><span>com material</span></div>
+          <div class="metric"><strong id="countReleased">0</strong><span>liberadas</span></div>
+        </div>
+        <div class="rail-tools"><input id="search" type="search" placeholder="Buscar aluno ou responsável"><button class="btn primary" id="syncCrm">Consultar CRM</button></div>
+        <div class="sync-note" id="syncNote">O CRM é somente consultado. Nada será alterado nele.</div>
+        <div class="delivery-list" id="deliveryList"></div>
+      </aside>
+      <main class="content" id="content"><div class="empty"><div><div class="big">BG</div><p>Escolha uma entrega para começar.</p></div></div></main>
+    </div>
+  </div>
+
+  <dialog id="eventDialog"><form class="dialog-body" id="eventForm" method="dialog"><h2>Novo evento</h2><label class="field"><span>Nome</span><input name="name" required maxlength="160" placeholder="Ex.: Festival de Verão 2027"></label><label class="field"><span>Data</span><input name="date" type="date"></label><label class="field"><span>Local</span><input name="place" maxlength="160"></label><label class="field"><span>Entrega por</span><select name="type"><option value="aluno">Aluno</option><option value="familia">Família</option><option value="banda">Banda</option><option value="grupo">Grupo</option></select></label><div class="dialog-actions"><button class="btn" value="cancel" type="button" data-close>Cancelar</button><button class="btn primary" type="submit">Criar evento</button></div></form></dialog>
+  <dialog id="deliveryDialog"><form class="dialog-body" id="deliveryForm" method="dialog"><h2>Entrega manual</h2><label class="field"><span>Aluno, família ou grupo</span><input name="name" required maxlength="160"></label><label class="field"><span>Responsável</span><input name="guardian" maxlength="160"></label><label class="field"><span>WhatsApp</span><input name="phone" maxlength="40"></label><label class="field"><span>Unidade</span><input name="unit" maxlength="80"></label><div class="dialog-actions"><button class="btn" value="cancel" type="button" data-close>Cancelar</button><button class="btn primary" type="submit">Criar entrega</button></div></form></dialog>
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
+
+    const SUPABASE_URL='https://hpeyyamwoisehqylrdtx.supabase.co';
+    const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwZXl5YW13b2lzZWhxeWxyZHR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2ODEyOTUsImV4cCI6MjEwMzI1NzI5NX0.PuameozNXedB46WdZjBcGwCWzTb3YGdROA3NRMjNHh8';
+    const ADMIN_FUNCTION=SUPABASE_URL+'/functions/v1/entregas-admin';
+    const PORTAL_BASE='https://camarim-la-music.vercel.app';
+    const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+    const $=id=>document.getElementById(id);
+    let events=[],deliveries=[],selectedEvent=null,selectedDelivery=null;
+
+    function showToast(message){const el=$('toast');el.textContent=message;el.classList.add('on');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.classList.remove('on'),3200)}
+    function slugify(value){return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,70)||'entrega'}
+    function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'BG'}
+    function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
+    function bytes(value){if(!value)return '';const units=['B','KB','MB','GB'];let n=Number(value),i=0;while(n>=1024&&i<3){n/=1024;i++}return (n>=10||i===0?n.toFixed(0):n.toFixed(1))+' '+units[i]}
+    function publicLink(delivery){return PORTAL_BASE+'/e/'+delivery.chave+'/'}
+
+    async function requireSession(){
+      const {data:{session}}=await sb.auth.getSession();
+      if(!session)return false;
+      const {data:isAdmin,error}=await sb.rpc('eh_admin');
+      if(error||!isAdmin){await sb.auth.signOut();return false}
+      $('login').classList.add('hidden');$('app').classList.remove('hidden');return true;
+    }
+
+    async function loadEvents(){
+      const {data,error}=await sb.from('eventos').select('*').order('criado_em',{ascending:false});
+      if(error)throw error;events=data||[];
+      const previous=selectedEvent?.id;
+      selectedEvent=events.find(event=>event.id===previous)||events[0]||null;
+      $('eventSelect').innerHTML=events.map(event=>`<option value="${event.id}">${escapeHtml(event.nome)}</option>`).join('');
+      if(selectedEvent)$('eventSelect').value=selectedEvent.id;
+      await loadDeliveries();
+    }
+
+    async function loadDeliveries(preferredId){
+      if(!selectedEvent){deliveries=[];renderList();renderDetail();return}
+      const {data,error}=await sb.from('entregas').select(`*,entrega_participantes(*),entrega_midias(*)`).eq('evento_id',selectedEvent.id).order('titulo');
+      if(error)throw error;deliveries=data||[];
+      const id=preferredId||selectedDelivery?.id;
+      selectedDelivery=deliveries.find(item=>item.id===id)||deliveries[0]||null;
+      renderList();renderDetail();
+    }
+
+    function renderList(){
+      const query=$('search').value.trim().toLowerCase();
+      const visible=deliveries.filter(item=>(item.titulo+' '+item.responsavel_nome+' '+item.unidade).toLowerCase().includes(query));
+      $('countAll').textContent=deliveries.length;
+      $('countReady').textContent=deliveries.filter(item=>(item.entrega_midias||[]).length).length;
+      $('countReleased').textContent=deliveries.filter(item=>item.liberado).length;
+      $('deliveryList').innerHTML=(visible.map(item=>{
+        const person=(item.entrega_participantes||[])[0];const photo=person?.foto_url;
+        return `<button class="delivery ${selectedDelivery?.id===item.id?'active':''}" data-id="${item.id}"><span class="avatar">${photo?`<img src="${escapeHtml(photo)}" alt="">`:initials(item.titulo)}</span><span><b>${escapeHtml(item.titulo)}</b><small>${escapeHtml(item.unidade||'Unidade não informada')} · ${item.entrega_midias?.length||0} arquivos</small></span><span class="status ${item.estado}">${item.liberado?'liberada':item.estado}</span></button>`;
+      }).join('')||'<div class="empty"><p>Nenhuma entrega nesta busca.</p></div>');
+      $('deliveryList').querySelectorAll('[data-id]').forEach(button=>button.onclick=()=>{selectedDelivery=deliveries.find(item=>item.id===button.dataset.id);renderList();renderDetail()});
+    }
+
+    function renderDetail(){
+      if(!selectedDelivery){$('content').innerHTML=`<div class="empty"><div><div class="big">${selectedEvent?'0':'BG'}</div><p>${selectedEvent?'Consulte o CRM ou crie uma entrega manual.':'Crie o primeiro evento.'}</p>${selectedEvent?'<button class="btn primary" id="manualEmpty">Nova entrega manual</button>':''}</div></div>`;if($('manualEmpty'))$('manualEmpty').onclick=()=>openDeliveryDialog();return}
+      const item=selectedDelivery;const media=[...(item.entrega_midias||[])].sort((a,b)=>a.ordem-b.ordem);const people=[...(item.entrega_participantes||[])].sort((a,b)=>a.ordem-b.ordem);const link=publicLink(item);
+      $('content').innerHTML=`<section class="detail"><div class="detail-head"><div><span class="eyebrow">${escapeHtml(selectedEvent?.nome||'Evento')}</span><h1>${escapeHtml(item.titulo)}</h1><div class="meta"><span>${escapeHtml(item.unidade||'Unidade não informada')}</span><span>·</span><span>${item.origem==='crm'?'Importado do CRM':'Cadastro manual'}</span><span>·</span><span>${item.pagamento==='paid'?'Pagamento confirmado':item.pagamento==='pending'?'Pagamento pendente':'Pagamento não informado'}</span></div></div><div class="head-actions"><button class="btn" id="manualDelivery">Nova entrega</button><button class="btn" id="publish" ${item.estado!=='rascunho'?'disabled':''}>Publicar</button><button class="btn ${item.liberado?'danger':'primary'}" id="release">${item.liberado?'Bloquear link':'Liberar material'}</button></div></div><div class="grid"><div><article class="card"><h2>Fotos e vídeos</h2><label class="drop" id="drop"><input id="files" type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm,application/zip,application/pdf"><b>Arraste os arquivos desta criança aqui</b>ou clique para escolher fotos e vídeos</label><div class="progress hidden" id="progress"><i id="progressBar"></i></div><div class="progress-text" id="progressText"></div><div class="media-grid">${media.map(renderMedia).join('')||'<p style="color:var(--muted)">Nenhum material enviado ainda.</p>'}</div></article></div><aside><article class="card"><h2>Entrega</h2><div class="info-grid"><div class="info"><span>Responsável</span><b>${escapeHtml(item.responsavel_nome||'Não informado')}</b></div><div class="info"><span>WhatsApp</span><b>${escapeHtml(item.responsavel_telefone||'Não informado')}</b></div><div class="info"><span>Contrato</span><b>${item.contrato==='yes'?'Fechado':'Não informado'}</b></div><div class="info"><span>Pagamento</span><b>${item.pagamento==='paid'?'Pago':item.pagamento==='pending'?'Pendente':'A definir'}</b></div></div><div class="link-box"><input value="${escapeHtml(link)}" readonly><button class="btn" id="copyLink" ${item.estado==='rascunho'?'disabled':''}>Copiar</button></div><p style="color:var(--muted);font-size:13px;line-height:1.5">${item.estado==='rascunho'?'Publique quando o cadastro estiver pronto.':item.liberado?'O link já mostra os arquivos e permite baixar.':'O link abre, mas informa que o material ainda está sendo preparado.'}</p></article><article class="card" style="margin-top:18px"><h2>Quem aparece neste link</h2><div class="participants">${people.map(person=>`<div class="person"><span class="avatar">${person.foto_url?`<img src="${escapeHtml(person.foto_url)}" alt="">`:initials(person.nome)}</span><span><b>${escapeHtml(person.nome)}</b><small>${escapeHtml(person.unidade||item.unidade)}</small></span></div>`).join('')||'<p style="color:var(--muted)">Nenhum participante.</p>'}</div><button class="btn wide" id="addPerson" style="margin-top:12px">Adicionar irmão ou participante</button></article></aside></div></section>`;
+      $('manualDelivery').onclick=()=>openDeliveryDialog();$('publish').onclick=publishDelivery;$('release').onclick=toggleRelease;$('copyLink').onclick=()=>copy(link);$('addPerson').onclick=addParticipant;
+      const input=$('files'),drop=$('drop');input.onchange=()=>uploadFiles([...input.files]);['dragenter','dragover'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',event=>uploadFiles([...event.dataTransfer.files]));
+      document.querySelectorAll('[data-remove-media]').forEach(button=>button.onclick=()=>removeMedia(button.dataset.removeMedia));
+    }
+
+    function renderMedia(item){
+      let visual='<div class="file-icon">DOC</div>';
+      if(item.tipo==='foto')visual='<div class="file-icon">FOTO</div>';
+      if(item.tipo==='video')visual='<div class="file-icon">VÍDEO</div>';
+      return `<article class="media">${visual}<button class="media-remove" data-remove-media="${item.id}" aria-label="Remover">×</button><div class="media-label"><b>${escapeHtml(item.titulo)}</b><small>${bytes(item.bytes)}</small></div></article>`;
+    }
+
+    async function login(event){event.preventDefault();$('loginError').textContent='';const button=event.submitter;button.disabled=true;const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});button.disabled=false;if(error){$('loginError').textContent='E-mail ou senha incorretos.';return}if(!await requireSession()){$('loginError').textContent='Este usuário não tem acesso administrativo.';return}await loadEvents()}
+    async function copy(value){try{await navigator.clipboard.writeText(value);showToast('Link copiado para enviar no WhatsApp.')}catch{prompt('Copie o link:',value)}}
+    async function publishDelivery(){const {error}=await sb.from('entregas').update({estado:'publicada'}).eq('id',selectedDelivery.id);if(error)return showToast('Não foi possível publicar.');showToast('Entrega publicada.');await loadDeliveries(selectedDelivery.id)}
+    async function toggleRelease(){const releasing=!selectedDelivery.liberado;if(releasing&&selectedDelivery.pagamento!=='paid'&&!confirm('O CRM ainda não mostra pagamento confirmado. Liberar mesmo assim?'))return;const {error}=await sb.from('entregas').update({liberado:releasing,estado:releasing?'liberada':'publicada'}).eq('id',selectedDelivery.id);if(error)return showToast('Não foi possível alterar a liberação.');showToast(releasing?'Material liberado.':'Link bloqueado.');await loadDeliveries(selectedDelivery.id)}
+
+    async function syncCrm(){
+      if(!selectedEvent)return;const button=$('syncCrm');button.disabled=true;button.textContent='Consultando…';$('syncNote').textContent='Buscando somente os contratados no CRM…';
+      try{const {data:{session}}=await sb.auth.getSession();const response=await fetch(ADMIN_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({acao:'sincronizar_crm',eventoId:selectedEvent.id})});const data=await response.json();if(!response.ok)throw new Error(data.erro||'falha');$('syncNote').textContent=`${data.total} contratados consultados · ${data.criados} novos · ${data.atualizados} atualizados · ${data.pagos} pagos`;showToast('CRM consultado com sucesso.');await loadDeliveries()}catch(error){$('syncNote').textContent='Não foi possível consultar o CRM agora.';showToast('A consulta ao CRM falhou.')}finally{button.disabled=false;button.textContent='Consultar CRM'}
+    }
+
+    function openDeliveryDialog(){$('deliveryForm').reset();$('deliveryDialog').showModal()}
+    async function createEvent(event){event.preventDefault();const form=new FormData(event.currentTarget);const name=String(form.get('name')||'').trim();const {data,error}=await sb.from('eventos').insert({nome:name,slug:slugify(name)+'-'+Date.now().toString(36).slice(-5),data_evento:form.get('date')||null,local:String(form.get('place')||'').trim()||null,tipo_participante:form.get('type')}).select().single();if(error)return showToast('Não foi possível criar o evento.');$('eventDialog').close();selectedEvent=data;await loadEvents();showToast('Evento criado.')}
+    async function createDelivery(event){event.preventDefault();if(!selectedEvent)return;const form=new FormData(event.currentTarget);const name=String(form.get('name')||'').trim();const {data,error}=await sb.from('entregas').insert({evento_id:selectedEvent.id,titulo:name,slug:slugify(name)+'-'+Date.now().toString(36).slice(-5),responsavel_nome:String(form.get('guardian')||'').trim(),responsavel_telefone:String(form.get('phone')||'').trim(),unidade:String(form.get('unit')||'').trim(),origem:'manual'}).select().single();if(error)return showToast('Não foi possível criar a entrega.');await sb.from('entrega_participantes').insert({entrega_id:data.id,nome:name,unidade:data.unidade,ordem:0});$('deliveryDialog').close();await loadDeliveries(data.id);showToast('Entrega criada.')}
+    async function addParticipant(){const name=prompt('Nome do irmão ou participante:');if(!name?.trim())return;const {error}=await sb.from('entrega_participantes').insert({entrega_id:selectedDelivery.id,nome:name.trim(),unidade:selectedDelivery.unidade,ordem:(selectedDelivery.entrega_participantes||[]).length});if(error)return showToast('Não foi possível adicionar.');await loadDeliveries(selectedDelivery.id)}
+
+    function safeName(name){const parts=name.split('.');const ext=parts.length>1?'.'+parts.pop().toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,8):'';return slugify(parts.join('.')).slice(0,70)+ext}
+    async function imagePreview(file){const bitmap=await createImageBitmap(file);const scale=Math.min(1,1600/Math.max(bitmap.width,bitmap.height));const canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.84));return {blob,width:canvas.width,height:canvas.height}}
+    async function videoInfo(file){return new Promise(resolve=>{const video=document.createElement('video');const url=URL.createObjectURL(file);video.preload='metadata';video.muted=true;video.onloadedmetadata=()=>{const result={width:video.videoWidth||null,height:video.videoHeight||null,duration:Number.isFinite(video.duration)?video.duration:null};URL.revokeObjectURL(url);resolve(result)};video.onerror=()=>{URL.revokeObjectURL(url);resolve({width:null,height:null,duration:null})};video.src=url})}
+    async function uploadFiles(files){
+      if(!files.length||!selectedDelivery)return;const valid=files.filter(file=>file.size>0);if(!valid.length)return;const progress=$('progress'),bar=$('progressBar'),label=$('progressText');progress.classList.remove('hidden');
+      try{for(let index=0;index<valid.length;index++){const file=valid[index];label.textContent=`Enviando ${index+1} de ${valid.length}: ${file.name}`;bar.style.width=Math.round(index/valid.length*100)+'%';const id=crypto.randomUUID();const base=`${selectedEvent.id}/${selectedDelivery.id}`;const originalPath=`${base}/originais/${id}-${safeName(file.name)}`;let kind='arquivo',previewPath=null,width=null,height=null,duration=null;if(file.type.startsWith('image/'))kind='foto';else if(file.type.startsWith('video/'))kind='video';const {error:uploadError}=await sb.storage.from('entregas').upload(originalPath,file,{contentType:file.type||'application/octet-stream',upsert:false});if(uploadError)throw uploadError;if(kind==='foto'){const preview=await imagePreview(file);previewPath=`${base}/previas/${id}.jpg`;width=preview.width;height=preview.height;const {error}=await sb.storage.from('entregas').upload(previewPath,preview.blob,{contentType:'image/jpeg',upsert:false});if(error)throw error}else if(kind==='video'){const info=await videoInfo(file);width=info.width;height=info.height;duration=info.duration}const {error:rowError}=await sb.from('entrega_midias').insert({entrega_id:selectedDelivery.id,tipo:kind,titulo:file.name,path_original:originalPath,path_previa:previewPath,mime_type:file.type||null,bytes:file.size,largura:width,altura:height,duracao:duration,ordem:(selectedDelivery.entrega_midias||[]).length+index});if(rowError)throw rowError}bar.style.width='100%';label.textContent='Envio concluído.';showToast(`${valid.length} arquivo(s) enviado(s).`);await loadDeliveries(selectedDelivery.id)}catch(error){console.error(error);label.textContent='O envio parou. Tente novamente; os arquivos já concluídos foram preservados.';showToast('Houve um problema no envio.')}finally{setTimeout(()=>progress.classList.add('hidden'),1800)}
+    }
+    async function removeMedia(id){const item=(selectedDelivery.entrega_midias||[]).find(media=>media.id===id);if(!item||!confirm(`Remover ${item.titulo}?`))return;const paths=[item.path_original,item.path_previa,item.poster_path].filter(Boolean);if(paths.length)await sb.storage.from('entregas').remove(paths);const {error}=await sb.from('entrega_midias').delete().eq('id',id);if(error)return showToast('Não foi possível remover.');await loadDeliveries(selectedDelivery.id);showToast('Arquivo removido.')}
+
+    $('loginForm').addEventListener('submit',login);$('eventSelect').onchange=async event=>{selectedEvent=events.find(item=>item.id===event.target.value);selectedDelivery=null;await loadDeliveries()};$('search').oninput=renderList;$('syncCrm').onclick=syncCrm;$('newEvent').onclick=()=>{$('eventForm').reset();$('eventDialog').showModal()};$('eventForm').onsubmit=createEvent;$('deliveryForm').onsubmit=createDelivery;$('signOut').onclick=async()=>{await sb.auth.signOut();location.reload()};document.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>button.closest('dialog').close());
+    if(await requireSession()){try{await loadEvents()}catch(error){console.error(error);showToast('Não foi possível carregar a plataforma.')}}
+  </script>
+</body>
+</html>

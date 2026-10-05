@@ -7,7 +7,9 @@ antigo do Julina Rock Fest permanece intacto.
 ## Como funciona
 
 1. O CRM continua sendo a fonte comercial: interessado, contato, contrato e pagamento.
-2. A Mesa de Entregas consulta o CRM e importa apenas alunos com contrato fechado.
+2. A Mesa de Entregas consulta o CRM e importa apenas alunos com contrato fechado. No Vocal
+   Kids, isso acontece ao entrar, a cada cinco minutos enquanto o painel estiver aberto e ao
+   voltar para a aba; o botão de atualização manual continua disponível.
 3. Cada aluno ou família recebe uma entrega própria. Irmãos podem ficar no mesmo link.
 4. A equipe envia fotos e vídeos já separados para aquela entrega.
 5. Depois de revisar, publica e libera a entrega.
@@ -45,7 +47,8 @@ expiram em uma hora.
 8. Use **Copiar link** e envie pelo WhatsApp.
 
 O sincronizador não apaga entregas nem sobrescreve participantes extras adicionados
-manualmente. Divergências devem ser revisadas no painel antes da publicação.
+manualmente. Eventos novos começam sem integração para não receberem alunos do evento errado.
+Divergências devem ser revisadas no painel antes da publicação.
 
 ## Criar o próximo evento
 

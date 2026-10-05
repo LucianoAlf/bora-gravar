@@ -62,7 +62,8 @@
     const PORTAL_BASE='https://camarim-la-music.vercel.app';
     const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
     const $=id=>document.getElementById(id);
-    let events=[],deliveries=[],selectedEvent=null,selectedDelivery=null;
+    const AUTO_SYNC_MS=5*60*1000;
+    let events=[],deliveries=[],selectedEvent=null,selectedDelivery=null,syncTimer=null,syncInFlight=false,lastSyncAt=0;
 
     function showToast(message){const el=$('toast');el.textContent=message;el.classList.add('on');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.classList.remove('on'),3200)}
     function slugify(value){return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,70)||'entrega'}
@@ -98,6 +99,16 @@
       renderList();renderDetail();
     }
 
+    function eventUsesCrm(){return selectedEvent?.integracao==='vocal_kids_crm'}
+    function stopAutoSync(){if(syncTimer)clearInterval(syncTimer);syncTimer=null}
+    async function startAutoSync(){
+      stopAutoSync();
+      if(!eventUsesCrm()){$('syncCrm').classList.add('hidden');$('syncNote').textContent='Este evento usa cadastro manual e não consulta o CRM.';return}
+      $('syncCrm').classList.remove('hidden');
+      await syncCrm(true);
+      syncTimer=setInterval(()=>{if(!document.hidden)syncCrm(true)},AUTO_SYNC_MS);
+    }
+
     function renderList(){
       const query=$('search').value.trim().toLowerCase();
       const visible=deliveries.filter(item=>(item.titulo+' '+item.responsavel_nome+' '+item.unidade).toLowerCase().includes(query));
@@ -127,14 +138,14 @@
       return `<article class="media">${visual}<button class="media-remove" data-remove-media="${item.id}" aria-label="Remover">×</button><div class="media-label"><b>${escapeHtml(item.titulo)}</b><small>${bytes(item.bytes)}</small></div></article>`;
     }
 
-    async function login(event){event.preventDefault();$('loginError').textContent='';const button=event.submitter;button.disabled=true;const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});button.disabled=false;if(error){$('loginError').textContent='E-mail ou senha incorretos.';return}if(!await requireSession()){$('loginError').textContent='Este usuário não tem acesso administrativo.';return}await loadEvents()}
+    async function login(event){event.preventDefault();$('loginError').textContent='';const button=event.submitter;button.disabled=true;const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});button.disabled=false;if(error){$('loginError').textContent='E-mail ou senha incorretos.';return}if(!await requireSession()){$('loginError').textContent='Este usuário não tem acesso administrativo.';return}await loadEvents();await startAutoSync()}
     async function copy(value){try{await navigator.clipboard.writeText(value);showToast('Link copiado para enviar no WhatsApp.')}catch{prompt('Copie o link:',value)}}
     async function publishDelivery(){const {error}=await sb.from('entregas').update({estado:'publicada'}).eq('id',selectedDelivery.id);if(error)return showToast('Não foi possível publicar.');showToast('Entrega publicada.');await loadDeliveries(selectedDelivery.id)}
     async function toggleRelease(){const releasing=!selectedDelivery.liberado;if(releasing&&selectedDelivery.pagamento!=='paid'&&!confirm('O CRM ainda não mostra pagamento confirmado. Liberar mesmo assim?'))return;const {error}=await sb.from('entregas').update({liberado:releasing,estado:releasing?'liberada':'publicada'}).eq('id',selectedDelivery.id);if(error)return showToast('Não foi possível alterar a liberação.');showToast(releasing?'Material liberado.':'Link bloqueado.');await loadDeliveries(selectedDelivery.id)}
 
-    async function syncCrm(){
-      if(!selectedEvent)return;const button=$('syncCrm');button.disabled=true;button.textContent='Consultando…';$('syncNote').textContent='Buscando somente os contratados no CRM…';
-      try{const {data:{session}}=await sb.auth.getSession();const response=await fetch(ADMIN_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({acao:'sincronizar_crm',eventoId:selectedEvent.id})});const data=await response.json();if(!response.ok)throw new Error(data.erro||'falha');$('syncNote').textContent=`${data.total} contratados consultados · ${data.criados} novos · ${data.atualizados} atualizados · ${data.pagos} pagos`;showToast('CRM consultado com sucesso.');await loadDeliveries()}catch(error){$('syncNote').textContent='Não foi possível consultar o CRM agora.';showToast('A consulta ao CRM falhou.')}finally{button.disabled=false;button.textContent='Consultar CRM'}
+    async function syncCrm(silent=false){
+      if(!selectedEvent||!eventUsesCrm()||syncInFlight)return;syncInFlight=true;const eventId=selectedEvent.id;const button=$('syncCrm');button.disabled=true;button.textContent='Atualizando…';$('syncNote').textContent='Atualizando os contratados pelo CRM…';
+      try{const {data:{session}}=await sb.auth.getSession();const response=await fetch(ADMIN_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({acao:'sincronizar_crm',eventoId:eventId})});const data=await response.json();if(!response.ok)throw new Error(data.erro||'falha');if(selectedEvent?.id!==eventId)return;lastSyncAt=Date.now();const time=new Date(lastSyncAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});$('syncNote').textContent=`Atualizado às ${time} · ${data.total} contratados · ${data.criados} novos · ${data.pagos} pagos`;if(!silent)showToast('CRM atualizado com sucesso.');await loadDeliveries()}catch(error){console.error(error);if(selectedEvent?.id===eventId)$('syncNote').textContent='Não foi possível atualizar o CRM agora. A lista anterior foi preservada.';if(!silent)showToast('A consulta ao CRM falhou.')}finally{syncInFlight=false;button.disabled=false;button.textContent='Atualizar CRM'}
     }
 
     function openDeliveryDialog(){$('deliveryForm').reset();$('deliveryDialog').showModal()}
@@ -151,8 +162,8 @@
     }
     async function removeMedia(id){const item=(selectedDelivery.entrega_midias||[]).find(media=>media.id===id);if(!item||!confirm(`Remover ${item.titulo}?`))return;const paths=[item.path_original,item.path_previa,item.poster_path].filter(Boolean);if(paths.length)await sb.storage.from('entregas').remove(paths);const {error}=await sb.from('entrega_midias').delete().eq('id',id);if(error)return showToast('Não foi possível remover.');await loadDeliveries(selectedDelivery.id);showToast('Arquivo removido.')}
 
-    $('loginForm').addEventListener('submit',login);$('eventSelect').onchange=async event=>{selectedEvent=events.find(item=>item.id===event.target.value);selectedDelivery=null;await loadDeliveries()};$('search').oninput=renderList;$('syncCrm').onclick=syncCrm;$('newEvent').onclick=()=>{$('eventForm').reset();$('eventDialog').showModal()};$('eventForm').onsubmit=createEvent;$('deliveryForm').onsubmit=createDelivery;$('signOut').onclick=async()=>{await sb.auth.signOut();location.reload()};document.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>button.closest('dialog').close());
-    if(await requireSession()){try{await loadEvents()}catch(error){console.error(error);showToast('Não foi possível carregar a plataforma.')}}
+    $('loginForm').addEventListener('submit',login);$('eventSelect').onchange=async event=>{selectedEvent=events.find(item=>item.id===event.target.value);selectedDelivery=null;await loadDeliveries();await startAutoSync()};$('search').oninput=renderList;$('syncCrm').onclick=()=>syncCrm(false);$('newEvent').onclick=()=>{$('eventForm').reset();$('eventDialog').showModal()};$('eventForm').onsubmit=createEvent;$('deliveryForm').onsubmit=createDelivery;$('signOut').onclick=async()=>{stopAutoSync();await sb.auth.signOut();location.reload()};document.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>button.closest('dialog').close());document.addEventListener('visibilitychange',()=>{if(!document.hidden&&eventUsesCrm()&&Date.now()-lastSyncAt>AUTO_SYNC_MS)syncCrm(true)});
+    if(await requireSession()){try{await loadEvents();await startAutoSync()}catch(error){console.error(error);showToast('Não foi possível carregar a plataforma.')}}
   </script>
 </body>
 </html>

@@ -66,8 +66,9 @@ Deno.serve(async (request) => {
     return response({ erro: "integracao_nao_configurada" }, 503);
   }
 
-  const { data: event } = await db.from("eventos").select("id").eq("id", body.eventoId).maybeSingle();
+  const { data: event } = await db.from("eventos").select("id, integracao").eq("id", body.eventoId).maybeSingle();
   if (!event) return response({ erro: "evento_invalido" }, 404);
+  if (event.integracao !== "vocal_kids_crm") return response({ erro: "evento_sem_integracao" }, 409);
 
   const crmResponse = await fetch(CRM_API_URL, {
     headers: {
